@@ -1,0 +1,72 @@
+services:
+  entity-detection:
+    env_file: [.env]
+    build:
+      args:
+        CONFIG: dialog_entity_detection.json
+        PORT: 9103
+        SRC_DIR: annotators/entity_detection/
+        COMMIT: 5d27dca3dfa0cf481324facd73f2e02f579f66b3
+      context: ./
+      dockerfile: annotators/entity_detection/Dockerfile_new
+    command: flask run -h 0.0.0.0 -p 9103
+    ports:
+      - 9103:9103
+    environment:
+      - CUDA_VISIBLE_DEVICES=''
+      - FLASK_APP=server
+    deploy:
+      resources:
+        limits:
+          memory: 2.5G
+        reservations:
+          memory: 2.5G
+  
+  entity-linking:
+    env_file: [.env]
+    build:
+      args:
+        CONFIG: kbqa_entity_linking_lite.json
+        PORT: 9075
+        SRC_DIR: annotators/entity_linking
+        COMMIT: 5b99ac3392e8e178e2bb4f9b218d4ddb2ec2e242
+      context: ./
+      dockerfile: annotators/entity_linking/Dockerfile
+    ports:
+      - 9075:9075
+    environment:
+      - CUDA_VISIBLE_DEVICES=''
+    deploy:
+      resources:
+        limits:
+          memory: 23G
+        reservations:
+          memory: 23G
+
+  wiki-parser:
+    env_file: [.env]
+    build:
+      args:
+        WIKI_LITE_DB: http://files.deeppavlov.ai/kbqa/wikidata/wikidata_lite.hdt
+        WIKI_LITE_INDEX_DB: http://files.deeppavlov.ai/kbqa/wikidata/wikidata_lite.hdt.index.v1-1
+        WIKI_CACHE_DB: http://files.deeppavlov.ai/kbqa/wikidata/wikidata_cache.json
+        CONFIG: wiki_parser.json
+        PORT: 9077
+        SRC_DIR: annotators/wiki_parser
+        COMMIT: ff5b156d16a949c3ec99da7fb60ae907dec37a41
+      context: ./
+      dockerfile: annotators/wiki_parser/Dockerfile
+    command: flask run -h 0.0.0.0 -p 9077
+    ports:
+      - 9077:9077
+    environment:
+      - CUDA_VISIBLE_DEVICES=''
+      - FLASK_APP=server
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 256M
+
+version: '3.7'
