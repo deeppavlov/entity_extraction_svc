@@ -68,8 +68,10 @@ class EntityLinkingRequest(BaseModel):
     context: List[List[str]]
 
 
-# class EntityLinkingResponse(BaseModel):
-#
+class EntityLinkingResponse(BaseModel):
+    parser_info: List[str]
+    query: List[List[Dict]]
+
 
 def extract_topic_skill_entities(utt, entity_substr_list, entity_ids_list):
     found_substr = ""
@@ -155,7 +157,10 @@ def respond(entity_linking_request: EntityLinkingRequest):
         sentry_sdk.capture_exception(e)
         logger.exception(e)
 
-    return entity_info_batch
+    response = EntityLinkingResponse(
+        parser_info=["find_top_triplets"], query=entity_info_batch
+    )
+    return response
 
 
 if __name__ == "__main__":
