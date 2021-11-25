@@ -1,19 +1,26 @@
 import logging
 import os
 import re
-import time
-from flask import Flask, request, jsonify
-import sentry_sdk
-from sentry_sdk.integrations.flask import FlaskIntegration
+from typing import List, Tuple, Dict, Union
+
 from deeppavlov import build_model
+from environs import Env
+from fastapi import FastAPI
+from pydantic import BaseModel
+import sentry_sdk
+import uvicorn
 
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 logger = logging.getLogger(__name__)
-sentry_sdk.init(dsn=os.getenv("SENTRY_DSN"), integrations=[FlaskIntegration()])
 
-app = Flask(__name__)
+sentry_sdk.init(os.getenv("SENTRY_DSN"))
 
-config_name = os.getenv("CONFIG")
+app = FastAPI()
+
+env = Env()
+env.read_env()
+
+config_name = env.str("CONFIG")
 
 try:
     el = build_model(config_name, download=False)
@@ -55,6 +62,15 @@ sport_dict = {
 }
 
 
+class EntityLinkingRequest(BaseModel):
+    entity_substr: List[List[str]]
+    template: List[str]
+    context: List[List[str]]
+
+
+# class EntityLinkingResponse(BaseModel):
+#
+
 def extract_topic_skill_entities(utt, entity_substr_list, entity_ids_list):
     found_substr = ""
     found_id = ""
@@ -80,13 +96,11 @@ def extract_topic_skill_entities(utt, entity_substr_list, entity_ids_list):
     return found_substr, found_id
 
 
-@app.route("/model", methods=["POST"])
-def respond():
-    st_time = time.time()
-    inp = request.json
-    entity_substr_batch = inp.get("entity_substr", [[""]])
-    template_batch = inp.get("template", [""])
-    context_batch = inp.get("context", [[""]])
+@app.post("/model")
+def respond(entity_linking_request: EntityLinkingRequest):
+    entity_substr_batch = entity_linking_request.entity_substr
+    template_batch = entity_linking_request.template
+    context_batch = entity_linking_request.context
     long_context_batch = []
     short_context_batch = []
     for entity_substr_list, context_list in zip(entity_substr_batch, context_batch):
@@ -140,10 +154,9 @@ def respond():
     except Exception as e:
         sentry_sdk.capture_exception(e)
         logger.exception(e)
-    total_time = time.time() - st_time
-    logger.info(f"entity linking exec time = {total_time:.3f}s")
-    return jsonify(entity_info_batch)
+
+    return entity_info_batch
 
 
 if __name__ == "__main__":
-    app.run(debug=False, host="0.0.0.0", port=3000)
+    uvicorn.run(app, host="0.0.0.0", port=9075)

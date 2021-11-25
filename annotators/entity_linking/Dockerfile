@@ -30,4 +30,4 @@ RUN python -m deeppavlov install $CONFIG
 
 RUN sed -i "s|$SED_ARG|g" "$CONFIG"
 
-CMD gunicorn  --workers=1 --timeout 500 server:app -b 0.0.0.0:8075
+CMD uvicorn --workers 1 --timeout-keep-alive 300 server:app --host 0.0.0.0 --port ${PORT}

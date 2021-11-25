@@ -43,6 +43,12 @@ class EntityDetectionRequest(BaseModel):
     text: str
 
 
+class EntityDetectionResponse(BaseModel):
+    entity_substr: List[List[str]]
+    template: List[str]
+    context: List[List[str]]
+
+
 def _align_entities_tags_offsets(
     entities_batch: List[List[str]],
     tags_batch: List[List[str]],
@@ -87,16 +93,23 @@ def extract_entities(text: str):
     alexa_entities = _align_entities_tags_offsets(entities_batch, tags_batch, entities_offsets_batch, text)
     lc_entities = _align_entities_tags_offsets(entities_batch_lc, tags_batch_lc, entities_offsets_batch_lc, text)
     unique_entities = {**alexa_entities, **lc_entities}
+    unique_entities_list = list(unique_entities.values())
 
-    logger.info(f"unique_entities: {unique_entities}")
+    logger.info(f"unique_entities: {unique_entities_list}")
 
-    return list(unique_entities.values())
+    return unique_entities_list
 
 
 @app.post("/respond")
 async def respond(entity_detection_request: EntityDetectionRequest):
     entities = extract_entities(entity_detection_request.text)
-    return entities
+    response = EntityDetectionResponse(
+        entity_substr=[[ent["entity_substr"] for ent in entities]],
+        template=[""],
+        context=[[ent["context"] for ent in entities]],
+    )
+
+    return response
 
 
 if __name__ == '__main__':
