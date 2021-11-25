@@ -8,8 +8,7 @@ services:
         SRC_DIR: annotators/entity_detection/
         COMMIT: 5d27dca3dfa0cf481324facd73f2e02f579f66b3
       context: ./
-      dockerfile: annotators/entity_detection/Dockerfile_new
-    command: flask run -h 0.0.0.0 -p 9103
+      dockerfile: annotators/entity_detection/Dockerfile
     ports:
       - 9103:9103
     environment:

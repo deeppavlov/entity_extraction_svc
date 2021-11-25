@@ -3,6 +3,7 @@ FROM python:3.7.6
 RUN apt-get update && apt-get install git -y
 
 ARG CONFIG
+ARG PORT
 ARG SRC_DIR
 ARG COMMIT=0.13.0
 
@@ -38,10 +39,6 @@ WORKDIR /src
 RUN pip install git+https://github.com/deepmipt/DeepPavlov.git@${COMMIT}
 RUN python -m deeppavlov install $CONFIG
 
-ARG SERVICE_PORT
-ENV SERVICE_PORT ${SERVICE_PORT}
-
 RUN sed -i "s|$SED_ARG|g" "$CONFIG"
 
-CMD gunicorn --workers=1 --timeout 300 server:app -b 0.0.0.0:${SERVICE_PORT}
-
+CMD uvicorn --workers 1 --timeout-keep-alive 300 server:app --host 0.0.0.0 --port ${PORT}

@@ -1,6 +1,7 @@
-Flask==1.1.1
+fastapi==0.47.1
 nltk==3.2.5
 numpy==1.15.4
-gunicorn==19.9.0
+uvicorn==0.11.7
 requests==2.22.0
 sentry-sdk==0.12.3
+environs==9.3.5
