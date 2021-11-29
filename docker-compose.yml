@@ -1,4 +1,22 @@
 services:
+  agent:
+    env_file: [.env]
+    build:
+      args:
+        CONFIG: pipeline.json
+        PORT: 9999
+        SRC_DIR: agent/
+      context: ./
+      dockerfile: agent/Dockerfile
+    ports:
+      - 9999:9999
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+        reservations:
+          memory: 64M
+
   entity-detection:
     env_file: [.env]
     build:
@@ -9,11 +27,13 @@ services:
         COMMIT: 5d27dca3dfa0cf481324facd73f2e02f579f66b3
       context: ./
       dockerfile: annotators/entity_detection/Dockerfile
+    command: python -m deeppavlov riseapi entity_detection.json -p 9103
     ports:
       - 9103:9103
+    volumes:
+      - ./annotators/entity_detection:/src
     environment:
       - CUDA_VISIBLE_DEVICES=''
-      - FLASK_APP=server
     deploy:
       resources:
         limits:
@@ -31,8 +51,11 @@ services:
         COMMIT: 5b99ac3392e8e178e2bb4f9b218d4ddb2ec2e242
       context: ./
       dockerfile: annotators/entity_linking/Dockerfile
+    command: python -m deeppavlov riseapi entity_linking.json -p 9075
     ports:
       - 9075:9075
+    volumes:
+      - ./annotators/entity_linking:/src
     environment:
       - CUDA_VISIBLE_DEVICES=''
     deploy:

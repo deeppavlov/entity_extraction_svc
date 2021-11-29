@@ -84,12 +84,6 @@ def extract_entities(text: str):
         probas_batch_lc,
     ) = entity_detection_lcquad([text])
 
-    logger.info(f"entities:\nalexa\n{entities_batch}\nlc\n{entities_batch_lc}")
-    logger.info(f"tags:\nalexa\n{tags_batch}\nlc\n{tags_batch_lc}")
-    logger.info(f"positions:\nalexa\n{positions_batch}\nlc\n{positions_batch_lc}")
-    logger.info(f"entities_offsets:\nalexa\n{entities_offsets_batch}\nlc\n{entities_offsets_batch_lc}")
-    logger.info(f"probas:\nalexa\n{probas_batch}\nlc\n{probas_batch_lc}")
-
     alexa_entities = _align_entities_tags_offsets(entities_batch, tags_batch, entities_offsets_batch, text)
     lc_entities = _align_entities_tags_offsets(entities_batch_lc, tags_batch_lc, entities_offsets_batch_lc, text)
     unique_entities = {**alexa_entities, **lc_entities}

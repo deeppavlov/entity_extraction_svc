@@ -20,12 +20,10 @@ RUN mkdir -p /root/.deeppavlov/downloads/wikidata_eng
 RUN wget -q -P /root/.deeppavlov/downloads/wikidata_eng http://files.deeppavlov.ai/kbqa/wikidata/kbqa_entity_linking_eng.tar.gz
 RUN tar -C /root/.deeppavlov/downloads/wikidata_eng -xvf /root/.deeppavlov/downloads/wikidata_eng/kbqa_entity_linking_eng.tar.gz
 
-RUN pip install git+https://github.com/deepmipt/DeepPavlov.git@${COMMIT}
-
-COPY $SRC_DIR /src
-
+COPY $SRC_DIR/$CONFIG /src/
 WORKDIR /src
 
+RUN pip install git+https://github.com/deepmipt/DeepPavlov.git@${COMMIT}
 RUN python -m deeppavlov install $CONFIG
 
 RUN sed -i "s|$SED_ARG|g" "$CONFIG"

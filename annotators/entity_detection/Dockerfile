@@ -33,12 +33,14 @@ RUN mkdir -p /root/.deeppavlov/models/ner_lcquad_detect_entities
 RUN wget -q -P /root/.deeppavlov/models/ner_lcquad_detect_entities http://files.deeppavlov.ai/kbqa/models/ner_lcquad_detect_entities.tar.gz
 RUN tar -C /root/.deeppavlov/models/ner_lcquad_detect_entities -xvf /root/.deeppavlov/models/ner_lcquad_detect_entities/ner_lcquad_detect_entities.tar.gz
 
-COPY $SRC_DIR /src
+COPY $SRC_DIR/$CONFIG /src/
 WORKDIR /src
 
 RUN pip install git+https://github.com/deepmipt/DeepPavlov.git@${COMMIT}
 RUN python -m deeppavlov install $CONFIG
 
 RUN sed -i "s|$SED_ARG|g" "$CONFIG"
+
+#COPY $SRC_DIR /src
 
 CMD uvicorn --workers 1 --timeout-keep-alive 300 server:app --host 0.0.0.0 --port ${PORT}
