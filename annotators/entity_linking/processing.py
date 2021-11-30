@@ -95,11 +95,11 @@ class EntityLinkingPostprocessor(Component):
     def __call__(
         self, entity_ids_batch, conf_batch, tokens_match_conf_batch, entity_substr_batch, short_context_batch
     ):
-        entity_info_list = []
+        entity_info_batch = []
         for entity_substr_list, entity_ids_list, conf_list, tokens_match_conf_list, context in zip(
                 entity_substr_batch, entity_ids_batch, conf_batch, tokens_match_conf_batch, short_context_batch
         ):
-            # entity_info_list = []
+            entity_info_list = []
             for entity_substr, entity_ids, conf, tokens_match_conf in zip(
                     entity_substr_list, entity_ids_list, conf_list, tokens_match_conf_list
             ):
@@ -117,8 +117,8 @@ class EntityLinkingPostprocessor(Component):
                 entity_info["confidences"] = [float(1.0)]
                 entity_info["tokens_match_conf"] = [float(1.0)]
                 entity_info_list.append(entity_info)
-            # entity_info_batch.append(entity_info_list)
-        return entity_info_list
+            entity_info_batch.append(entity_info_list)
+        return entity_info_batch
 
     def _extract_topic_skill_entities(self, utt, entity_substr_list, entity_ids_list):
         found_substr = ""

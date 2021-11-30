@@ -40,7 +40,7 @@ class EntityDeduplicator(Component):
 
         entity_substr = [[ent["entity_substr"] for ent in unique_entities_list]],
         template = [""],
-        context = [ent["context"][0] for ent in unique_entities_list],
+        context = [unique_entities_list[0]["context"][0]],
 
         logger.info(f"detection: {entity_substr}, {template}, {context}")
 

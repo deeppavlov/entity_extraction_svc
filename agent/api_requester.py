@@ -45,11 +45,10 @@ class ApiRequester(Component):
         """
         data = kwargs or dict(zip(self.param_names, args))
 
-        logger.error(f"Sending to {self.url}: {data}")
-        print(f"Sending to {self.url}: {data}")
+        logger.info(f"Sending to {self.url}: {data}")
         response = requests.post(self.url, json=data).json()
         # response = list(zip(*response))
+        logger.info(f"Response {response}")
 
-        if self.out_count == 1:
-            response = response[0]
+        response = response[0]
         return response

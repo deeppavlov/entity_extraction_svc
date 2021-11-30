@@ -18,7 +18,7 @@ app = Flask(__name__)
 def respond():
     st_time = time.time()
     inp = request.json
-    parser_info = inp.get("parser_info", ["find_triplets"])
+    parser_info = inp.get("parser_info", ["find_top_triplets"])
     query = inp.get("query", [("Q0", "P0", "forw")])
     utt_num = inp.get("utt_num", 0)
     res = [[] for _ in query]
@@ -30,7 +30,7 @@ def respond():
         logger.exception(e)
     total_time = time.time() - st_time
     logger.info(f"wiki parser exec time = {total_time:.3f}s")
-    return jsonify(res)
+    return jsonify([res])
 
 
 if __name__ == "__main__":
