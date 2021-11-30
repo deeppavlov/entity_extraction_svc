@@ -5,7 +5,6 @@
       {
         "class_name": "api_requester:ApiRequester",
         "url": "ENTITY_DETECTION_URL",
-        "id": "entity_detection",
         "in": ["text"],
         "param_names": ["text"],
         "out": ["entity_substr", "template", "context"]
@@ -13,7 +12,6 @@
       {
         "class_name": "api_requester:ApiRequester",
         "url": "ENTITY_LINKING_URL",
-        "id": "entity_linking",
         "in": ["entity_substr", "template", "context"],
         "param_names": ["entity_substr", "template", "context"],
         "out": ["entity_info_batch"]
@@ -21,7 +19,6 @@
       {
         "class_name": "api_requester:ApiRequester",
         "url": "WIKI_PARSER_URL",
-        "id": "wiki_parser",
         "in": ["entity_info_batch"],
         "param_names": ["query"],
         "out": ["wikidata"]
