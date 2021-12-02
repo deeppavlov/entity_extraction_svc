@@ -3,16 +3,12 @@ FROM python:3.7.6
 RUN apt-get update && apt-get install git -y
 
 ARG CONFIG
-ARG PORT
 ARG SRC_DIR
 ARG COMMIT=0.13.0
 
 ENV CONFIG=$CONFIG
-ENV PORT=$PORT
 
 ARG SED_ARG=" | "
-ARG SERVICE_NAME
-ENV SERVICE_NAME ${SERVICE_NAME}
 
 COPY ./annotators/entity_detection/requirements.txt /src/requirements.txt
 RUN pip install -r /src/requirements.txt
@@ -40,7 +36,3 @@ RUN pip install git+https://github.com/deepmipt/DeepPavlov.git@${COMMIT}
 RUN python -m deeppavlov install $CONFIG
 
 RUN sed -i "s|$SED_ARG|g" "$CONFIG"
-
-#COPY $SRC_DIR /src
-
-CMD uvicorn --workers 1 --timeout-keep-alive 300 server:app --host 0.0.0.0 --port ${PORT}

@@ -13,7 +13,7 @@
         "config_path": "entity_detection_lcquad.json"
       },
       {
-        "class_name": "postprocessor:EntityDeduplicator",
+        "class_name": "processing:EntityDeduplicator",
         "in": [
           "text",
           "entities_alexa",
