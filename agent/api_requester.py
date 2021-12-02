@@ -1,11 +1,9 @@
-import concurrent
 import logging
 from os import getenv
-from typing import List, Any, Dict, Optional
+from typing import List, Any, Dict
 
 import requests
 from deeppavlov.core.models.component import Component
-from requests import post
 
 
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
@@ -46,9 +44,8 @@ class ApiRequester(Component):
         data = kwargs or dict(zip(self.param_names, args))
 
         logger.info(f"Sending to {self.url}: {data}")
-        response = requests.post(self.url, json=data).json()
-        # response = list(zip(*response))
-        logger.info(f"Response {response}")
+        response_batch = requests.post(self.url, json=data).json()
+        logger.info(f"Response {response_batch}")
 
-        response = response[0]
+        response = response_batch[0]
         return response
