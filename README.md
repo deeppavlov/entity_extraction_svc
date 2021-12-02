@@ -1,107 +1,314 @@
-## Welcome to DD-IDE SDK
-This is an early alpha version of the DD-IDDE SDK. It is used in combination with the DeepPavlov's DD-IDDE available [here](https://github.com/deepmipt/vscode-dff).
+## Entity Extraction SVC
+Entity extraction API powered by DeepPavlov configs.
 
-## Requirements
 
-```bash
-pip install -r requirements.txt
-python -m spacy download en_core_web_sm
+## Run with docker-compose
+`docker-compose up --build`
 
-# install dff
-pip install dff
-# install dashboard for stats
-pip install dff-node-stats[dashboard] 
-```
-### Environment
 
-| Item           | Requirements                                          | Comments                                                     |
-| -------------- | ----------------------------------------------------- | ------------------------------------------------------------ |
-| OS             | Debian-based distribution, e.g., Ubuntu or Windows 10 | This version was tested on Ubuntu 18.04 under WSL2 on Windows 11 and Windows 10. |
-| Python         | v3.9+                                                 | This version was tested on OS with Python 3.9.               |
-| Docker         | v20+                                                  | This version was tested with Docker v20.10.7 (64-bit).       |
-| Docker-Compose | v1.29.2                                               | This version was tested with Docker-Compose v1.29.2.         |
+## How to
+Main gateway (with Swagger UI) is available at http://localhost:9999/
 
-### VS Code
-#### Required Extensions
-* DD-IDDE
-* Python
-* Docker
 
-#### Optional Extensions
-* Remote - WSL 
-
-#### Set WSL-based Terminal As Default One
-If needed, set your WSL-based terminal app as the default one in your VS Code by following these [instructions](https://dev.to/giannellitech/setting-the-default-terminal-in-vs-code-95c).
-
-### Python 3.9 - set as default (optional)
-1. Install the python3.9 package using apt-get
-
-```sudo apt-get install python3.9```
-
-Add *Python3.6* & *Python 3.9* to update-alternatives
-
-```sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.6 1```
-```sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.9 2```
-
-Update Python 3 to point to Python 3.9:
-
-```sudo update-alternatives --config python3```
-
-Enter 2 for Python 3.9
-
-Test the version of python:
-
-```python3 --version```
-```Python 3.9``` 
-
-Test the version of python used by pip3 command:
-
-```pip3 --version```
-```pip 21.3.1 from /home/danielko/.local/lib/python3.9/site-packages/pip (python 3.9)```
-
-### Prerequisites
-
-```pip3 install lxml```
-
-## Installation Process
-### Runtime
-We use [Dialog Flow Framework](https://www.github.com/deepmipt/dialog_flow_framework) as the runtime for the open-domain/scenario-driven chatbots.
-
-Follow these instructions to install Dialog Flow Framework:
-```bash
-# install dff
-pip install dff
-# install dashboard for stats
-pip install dff-node-stats[dashboard] 
+#### POST `/model`
+```json
+{
+  "text": [
+    "what is the capital of Great Britain?"
+  ]
+}
 ```
 
-Follow these requirements to prepare DD-IDDE SDK to run on your machine:
+#### RESPONSE
+<details>
 
-```bash
-pip install -r requirements.txt
+<summary>Show full response</summary>
+
+```json
+[
+  [
+    {
+      "entities_info": {
+        "Great Britain": {
+          "conf": 0.14,
+          "entity_label": "Great Britain",
+          "inception": [
+            [
+              "\"+1707-05-01^^T\"",
+              "01 May 1707"
+            ]
+          ],
+          "instance of": [
+            [
+              "Q3024240",
+              "historical country"
+            ],
+            [
+              "Q3624078",
+              "sovereign state"
+            ],
+            [
+              "Q417175",
+              "kingdom"
+            ]
+          ],
+          "participant in": [
+            [
+              "Q3024756",
+              "Battle of Porto Bello"
+            ],
+            [
+              "Q677929",
+              "Battle of Toulon"
+            ],
+            [
+              "Q944941",
+              "Irish Rebellion of 1798"
+            ]
+          ],
+          "plain_entity": "Q161885",
+          "pos": 0,
+          "token_conf": 1,
+          "types_2hop": [
+            [
+              "Q19953632",
+              "former administrative territorial entity"
+            ],
+            [
+              "Q3024240",
+              "historical country"
+            ],
+            [
+              "Q7275",
+              "state"
+            ],
+            [
+              "Q417175",
+              "kingdom"
+            ],
+            [
+              "Q3624078",
+              "sovereign state"
+            ],
+            [
+              "Q7269",
+              "monarchy"
+            ],
+            [
+              "Q96196009",
+              "state (former and current)"
+            ],
+            [
+              "Q1250464",
+              "realm"
+            ],
+            [
+              "Q6256",
+              "country"
+            ]
+          ]
+        },
+        "capital": {
+          "conf": 0.15,
+          "entity_label": "Le Capital",
+          "genre": [
+            [
+              "Q130232",
+              "drama"
+            ]
+          ],
+          "instance of": [
+            [
+              "Q11424",
+              "film"
+            ]
+          ],
+          "narrative location": [
+            [
+              "Q60",
+              "New York City"
+            ],
+            [
+              "Q84",
+              "London"
+            ],
+            [
+              "Q90",
+              "Paris"
+            ]
+          ],
+          "plain_entity": "Q3220821",
+          "pos": 0,
+          "publication date": [
+            [
+              "\"+2012-11-14^^T\"",
+              "14 November 2012"
+            ],
+            [
+              "\"+2013-08-08^^T\"",
+              "08 August 2013"
+            ],
+            [
+              "\"+2015-01-08^^T\"",
+              "08 January 2015"
+            ]
+          ],
+          "token_conf": 1,
+          "types_2hop": [
+            [
+              "Q2431196",
+              "audiovisual work"
+            ],
+            [
+              "Q11424",
+              "film"
+            ],
+            [
+              "Q4502142",
+              "visual artwork"
+            ],
+            [
+              "Q20937557",
+              "series"
+            ],
+            [
+              "Q10301427",
+              "moving image"
+            ]
+          ]
+        }
+      },
+      "topic_skill_entities_info": {
+        "Great Britain": {
+          "age": 356,
+          "conf": 0.23,
+          "country of sitizenship": [
+            [
+              "Q161885",
+              "Great Britain"
+            ]
+          ],
+          "date of birth": [
+            [
+              "\"+1665-02-06^^T\"",
+              "06 February 1665"
+            ]
+          ],
+          "entity_label": "Anne of Great Britain",
+          "instance of": [
+            [
+              "Q5",
+              "human"
+            ]
+          ],
+          "occupation": [
+            [
+              "Q82955",
+              "politician"
+            ]
+          ],
+          "plain_entity": "Q119702",
+          "pos": 3,
+          "spouse": [
+            [
+              "Q317499",
+              "Prince George of Denmark"
+            ]
+          ],
+          "token_conf": 1,
+          "types_2hop": [
+            [
+              "Q28640",
+              "profession"
+            ],
+            [
+              "Q82955",
+              "politician"
+            ],
+            [
+              "Q5",
+              "human"
+            ],
+            [
+              "Q702269",
+              "professional"
+            ]
+          ]
+        },
+        "capital": {
+          "conf": 0.15,
+          "entity_label": "Le Capital",
+          "genre": [
+            [
+              "Q130232",
+              "drama"
+            ]
+          ],
+          "instance of": [
+            [
+              "Q11424",
+              "film"
+            ]
+          ],
+          "narrative location": [
+            [
+              "Q60",
+              "New York City"
+            ],
+            [
+              "Q84",
+              "London"
+            ],
+            [
+              "Q90",
+              "Paris"
+            ]
+          ],
+          "plain_entity": "Q3220821",
+          "pos": 0,
+          "publication date": [
+            [
+              "\"+2012-11-14^^T\"",
+              "14 November 2012"
+            ],
+            [
+              "\"+2013-08-08^^T\"",
+              "08 August 2013"
+            ],
+            [
+              "\"+2015-01-08^^T\"",
+              "08 January 2015"
+            ]
+          ],
+          "token_conf": 1,
+          "types_2hop": [
+            [
+              "Q2431196",
+              "audiovisual work"
+            ],
+            [
+              "Q11424",
+              "film"
+            ],
+            [
+              "Q4502142",
+              "visual artwork"
+            ],
+            [
+              "Q20937557",
+              "series"
+            ],
+            [
+              "Q10301427",
+              "moving image"
+            ]
+          ]
+        }
+      },
+      "utt_num": 0
+    }
+  ]
+]
 ```
 
-### Discourse Moves Recommendation System
-We use our Speech Functions Classifier & Predictor from our larger [DeepPavlov Dream](https://www.github.com/deepmipt/dream) Multiskill AI Assistant Platform.
-
-Follow these instructions to run the Discourse Moves Recommendation System:
-```bash 
-docker-compose up -d --build
-```
-After that sf predictor is available on `localhost:8107/annotation` and sf classifier is availible on `localhost:8108/annotation` 
-
-## Usage
-### DD-IDDE as Designer
-Go to your local clone of this repo and run:
-
-```code .```
-
-This will ensure that your VS Code will run from this folder, and will (in case you use WSL) run through WSL.
-
-### Discourse Moves Recommendation System
-TBD
-
-## Generic Responses
-TBD
-## Entity Detection
-TBD
+</details>
