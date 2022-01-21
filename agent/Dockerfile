@@ -9,6 +9,7 @@ ENV PORT=$PORT
 
 COPY ./agent/requirements.txt /src/requirements.txt
 RUN pip install -r /src/requirements.txt
+COPY ./agent/server/server.py /usr/local/lib/python3.7/site-packages/deeppavlov/utils/server/server.py
 
 COPY $SRC_DIR /src
 WORKDIR /src

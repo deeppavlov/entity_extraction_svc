@@ -49,3 +49,25 @@ class ApiRequester(Component):
 
         response = response_batch[0]
         return response
+
+
+class OutputFormatter(Component):
+    """Component for formatting final pipeline output
+    """
+
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def __call__(self, *args: List[Any], **kwargs: Dict[str, Any]):
+        """
+
+        Args:
+            *args:
+            **kwargs:
+
+        Returns:
+            formatted wikidata output
+        """
+        print(args)
+        print(kwargs)
+        return args
