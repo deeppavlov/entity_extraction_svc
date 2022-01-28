@@ -1,0 +1,5 @@
+environs
+requests
+datasets
+pandas
+jupyter
