@@ -1,4 +1,4 @@
-## Entity Extraction SVC
+## Entity Extraction Service
 Entity extraction API powered by DeepPavlov configs.
 
 
