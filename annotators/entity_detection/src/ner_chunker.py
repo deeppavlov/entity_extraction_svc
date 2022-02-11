@@ -18,7 +18,7 @@ from logging import getLogger
 from string import punctuation
 from typing import List, Tuple
 
-import pymorphy2
+import nltk
 from deeppavlov.core.commands.utils import expand_path
 from deeppavlov.core.common.chainer import Chainer
 from deeppavlov.core.common.registry import register
@@ -29,6 +29,7 @@ from transformers import AutoTokenizer
 from src.entity_detection_parser import EntityDetectionParser
 
 log = getLogger(__name__)
+nltk.download('averaged_perceptron_tagger')
 
 
 @register('ner_chunker')
@@ -218,7 +219,6 @@ class NerChunkModel(Component):
         self.ner = ner
         self.ner_parser = ner_parser
         self.re_tokenizer = re.compile(r"[\w']+|[^\w ]")
-        self.morph = pymorphy2.MorphAnalyzer()
         self.add_nouns = add_nouns
 
     def __call__(self, text_batch_list: List[List[str]],
@@ -243,9 +243,10 @@ class NerChunkModel(Component):
                       f"ner_probas_batch {ner_probas_batch} probas_batch {probas_batch}")
             if self.add_nouns:
                 for i in range(len(ner_tokens_batch)):
-                    for j in range(len(ner_tokens_batch[i])):
-                        if self.morph.parse(ner_tokens_batch[i][j])[0].tag.POS == "NOUN" and ner_probas_batch[i][j] == "O":
-                            ner_probas_batch[i][j] = "B_MISC"
+                    pos_tags = nltk.pos_tag(ner_tokens_batch[i])
+                    for j in range(len(pos_tags)):
+                        if pos_tags[j][1] in {"NNP", "NN"} and ner_probas_batch[i][j] == "O":
+                            ner_probas_batch[i][j] = "B-MISC"
             entity_substr_batch, entity_positions_batch, entity_probas_batch, tokens_conf_batch = \
                 self.ner_parser(ner_tokens_batch, ner_probas_batch, probas_batch)
             tm_ner_end = time.time()

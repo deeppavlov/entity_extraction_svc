@@ -46,7 +46,8 @@ class EntityDetectionParser(Component):
     """This class parses probabilities of tokens to be a token from the entity substring."""
 
     def __init__(self, o_tag: str, tags_file: str, entity_tags: List[str] = None, ignore_points: bool = False,
-                 return_entities_with_tags: bool = False, add_nouns: bool = False, thres_proba: float = 0.8, **kwargs):
+                 return_entities_with_tags: bool = False, add_nouns: bool = False, thres_proba: float = 0.8,
+                 misc_proba: float = 0.7, **kwargs):
         """
 
         Args:
@@ -64,6 +65,7 @@ class EntityDetectionParser(Component):
         self.ignore_points = ignore_points
         self.return_entities_with_tags = return_entities_with_tags
         self.thres_proba = thres_proba
+        self.misc_proba = misc_proba
         self.tag_ind_dict = {}
         with open(str(expand_path(tags_file))) as fl:
             tags = [line.split('\t')[0] for line in fl.readlines()]
@@ -180,7 +182,10 @@ class EntityDetectionParser(Component):
 
                 entity_dict[f_tag].append(tok)
                 entity_positions_dict[f_tag].append(cnt)
-                entity_probas_dict[f_tag].append(probas[self.tags_ind[tag]])
+                if f_tag == "MISC":
+                    entity_probas_dict[f_tag].append(self.misc_proba)
+                else:
+                    entity_probas_dict[f_tag].append(probas[self.tags_ind[tag]])
 
             elif any(entity_dict.values()):
                 for tag, entity in entity_dict.items():

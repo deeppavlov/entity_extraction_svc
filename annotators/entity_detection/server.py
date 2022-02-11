@@ -17,7 +17,6 @@ app = Flask(__name__)
 
 config_name = os.getenv("CONFIG")
 lowercase = int(os.getenv("LOWERCASE", "1"))
-logger.info(f"config_name {config_name} lowercase {lowercase}, {type(lowercase)}")
 
 try:
     entity_detection = build_model(config_name, download=True)
