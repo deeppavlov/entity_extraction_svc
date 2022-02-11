@@ -1,11 +1,13 @@
-FROM tensorflow/tensorflow:1.15.2-gpu
+FROM python:3.7.6
 
 RUN apt-get -y update && \
-    apt-get install -y software-properties-common && \
-    apt-get update && apt-get install git -y && apt-get install -y wget
+    apt-get install -y build-essential libssl-dev zlib1g-dev libbz2-dev \
+libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev \
+xz-utils tk-dev libffi-dev liblzma-dev python-openssl git
+
+RUN apt-get install -y sqlite3
 
 ARG CONFIG
-ARG COMMIT=0.13.0
 ARG PORT
 ARG SRC_DIR
 ARG SED_ARG=" | "
@@ -13,19 +15,17 @@ ARG SED_ARG=" | "
 ENV CONFIG=$CONFIG
 ENV PORT=$PORT
 
+RUN pip install pybind11==2.2.4
+RUN pip install hdt==2.3
+
 COPY ./annotators/entity_linking/requirements.txt /src/requirements.txt
 RUN pip install -r /src/requirements.txt
 
-RUN mkdir -p /root/.deeppavlov/downloads/wikidata_eng
-RUN wget -q -P /root/.deeppavlov/downloads/wikidata_eng http://files.deeppavlov.ai/kbqa/wikidata/kbqa_entity_linking_eng.tar.gz
-RUN tar -C /root/.deeppavlov/downloads/wikidata_eng -xvf /root/.deeppavlov/downloads/wikidata_eng/kbqa_entity_linking_eng.tar.gz
+COPY $SRC_DIR /src
 
-COPY $SRC_DIR/$CONFIG /src/
 WORKDIR /src
-
-RUN pip install git+https://github.com/deepmipt/DeepPavlov.git@${COMMIT}
 RUN python -m deeppavlov install $CONFIG
 
 RUN sed -i "s|$SED_ARG|g" "$CONFIG"
 
-CMD uvicorn --workers 1 --timeout-keep-alive 300 server:app --host 0.0.0.0 --port ${PORT}
+CMD gunicorn  --workers=1 --timeout 500 server:app -b 0.0.0.0:9075
