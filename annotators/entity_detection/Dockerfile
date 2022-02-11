@@ -1,38 +1,25 @@
-FROM python:3.7.6
+FROM deeppavlov/base-gpu:0.12.1
 
-RUN apt-get update && apt-get install git -y
-
+ARG SEQ_TAG_CONFIG
 ARG CONFIG
+ARG LOWERCASE
+ARG PORT
 ARG SRC_DIR
-ARG COMMIT=0.13.0
-
-ENV CONFIG=$CONFIG
-
 ARG SED_ARG=" | "
+
+ENV SEQ_TAG_CONFIG=$SEQ_TAG_CONFIG
+ENV CONFIG=$CONFIG
+ENV LOWERCASE=$LOWERCASE
+ENV PORT=$PORT
 
 COPY ./annotators/entity_detection/requirements.txt /src/requirements.txt
 RUN pip install -r /src/requirements.txt
 
-RUN mkdir -p /root/.deeppavlov/downloads/bert_models/bert-base-uncased
-RUN wget -q -P /root/.deeppavlov/downloads/bert_models/bert-base-uncased http://files.deeppavlov.ai/deeppavlov_data/dialog_entity_detection/bert-base-uncased.tar.gz
-RUN tar -C /root/.deeppavlov/downloads/bert_models/bert-base-uncased -xvf /root/.deeppavlov/downloads/bert_models/bert-base-uncased/bert-base-uncased.tar.gz
+COPY $SRC_DIR /src
 
-RUN mkdir -p /root/.deeppavlov/models/dialog_entity_detection
-RUN wget -q -P /root/.deeppavlov/models/dialog_entity_detection http://files.deeppavlov.ai/deeppavlov_data/dialog_entity_detection/dialog_entity_detection_model.tar.gz
-RUN tar -C /root/.deeppavlov/models/dialog_entity_detection -xvf /root/.deeppavlov/models/dialog_entity_detection/dialog_entity_detection_model.tar.gz
-
-RUN mkdir -p /root/.deeppavlov/downloads/bert_models/uncased_L-6_H-512_A-8
-RUN wget -q -P /root/.deeppavlov/downloads/bert_models/uncased_L-6_H-512_A-8 http://files.deeppavlov.ai/deeppavlov_data/bert/uncased_L-6_H-512_A-8.zip
-RUN unzip /root/.deeppavlov/downloads/bert_models/uncased_L-6_H-512_A-8/uncased_L-6_H-512_A-8.zip -d /root/.deeppavlov/downloads/bert_models/uncased_L-6_H-512_A-8
-
-RUN mkdir -p /root/.deeppavlov/models/ner_lcquad_detect_entities
-RUN wget -q -P /root/.deeppavlov/models/ner_lcquad_detect_entities http://files.deeppavlov.ai/kbqa/models/ner_lcquad_detect_entities.tar.gz
-RUN tar -C /root/.deeppavlov/models/ner_lcquad_detect_entities -xvf /root/.deeppavlov/models/ner_lcquad_detect_entities/ner_lcquad_detect_entities.tar.gz
-
-COPY $SRC_DIR/$CONFIG /src/
 WORKDIR /src
+RUN python -m deeppavlov install $SEQ_TAG_CONFIG
 
-RUN pip install git+https://github.com/deepmipt/DeepPavlov.git@${COMMIT}
-RUN python -m deeppavlov install $CONFIG
+RUN sed -i "s|$SED_ARG|g" "$SEQ_TAG_CONFIG"
 
-RUN sed -i "s|$SED_ARG|g" "$CONFIG"
+CMD gunicorn  --workers=1 --timeout 500 server:app -b 0.0.0.0:9103
