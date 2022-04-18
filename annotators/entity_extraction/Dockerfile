@@ -7,25 +7,26 @@ xz-utils tk-dev libffi-dev liblzma-dev python-openssl git
 
 RUN apt-get install -y sqlite3
 
-ARG CONFIG
+ARG NER_CONFIG
+ARG EL_CONFIG
 ARG PORT
 ARG SRC_DIR
 ARG SED_ARG=" | "
 
-ENV CONFIG=$CONFIG
+ENV NER_CONFIG=$NER_CONFIG
+ENV EL_CONFIG=$EL_CONFIG
 ENV PORT=$PORT
 
 RUN pip install pybind11==2.2.4
 RUN pip install hdt==2.3
 
-COPY ./annotators/entity_linking/requirements.txt /src/requirements.txt
+COPY ./annotators/entity_extraction/requirements.txt /src/requirements.txt
 RUN pip install -r /src/requirements.txt
 
 COPY $SRC_DIR /src
 
 WORKDIR /src
-RUN python -m deeppavlov install $CONFIG
+RUN python -m deeppavlov install $NER_CONFIG
+RUN python -m deeppavlov install $EL_CONFIG
 
-RUN sed -i "s|$SED_ARG|g" "$CONFIG"
-
-CMD gunicorn  --workers=1 --timeout 500 server:app -b 0.0.0.0:9075
+CMD python server.py

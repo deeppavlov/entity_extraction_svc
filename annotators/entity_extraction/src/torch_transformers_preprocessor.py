@@ -67,6 +67,7 @@ class TorchTransformersNerPreprocessor(Component):
                  token_masking_prob: float = 0.0,
                  provide_subword_tags: bool = False,
                  subword_mask_mode: str = "first",
+                 return_offsets: bool = False,
                  **kwargs):
         self._re_tokenizer = re.compile(r"[\w']+|[^\w ]")
         self.provide_subword_tags = provide_subword_tags
@@ -74,9 +75,14 @@ class TorchTransformersNerPreprocessor(Component):
         self.max_seq_length = max_seq_length
         self.max_subword_length = max_subword_length
         self.subword_mask_mode = subword_mask_mode
-        vocab_file = str(expand_path(vocab_file))
-        self.tokenizer = AutoTokenizer.from_pretrained(vocab_file, do_lower_case=do_lower_case)
+        if Path(vocab_file).is_file():
+            vocab_file = str(expand_path(vocab_file))
+            self.tokenizer = AutoTokenizer(vocab_file=vocab_file,
+                                           do_lower_case=do_lower_case)
+        else:
+            self.tokenizer = AutoTokenizer.from_pretrained(vocab_file, do_lower_case=do_lower_case)
         self.token_masking_prob = token_masking_prob
+        self.return_offsets = return_offsets
 
     def __call__(self,
                  tokens: Union[List[List[str]], List[str]],
@@ -144,7 +150,10 @@ class TorchTransformersNerPreprocessor(Component):
                         log.warning(f'Tags len: {len(ts)}\n Tags: {ts}')
                 return tokens, subword_tokens, subword_tok_ids, \
                        attention_mask, startofword_markers, nonmasked_tags
-        return tokens, subword_tokens, subword_tok_ids, startofword_markers, attention_mask, tokens_offsets_batch
+        if self.return_offsets:
+            return tokens, subword_tokens, subword_tok_ids, startofword_markers, attention_mask, tokens_offsets_batch
+        else:
+            return tokens, subword_tokens, subword_tok_ids, startofword_markers, attention_mask
 
     @staticmethod
     def _ner_bert_tokenize(tokens: List[str],
@@ -181,3 +190,115 @@ class TorchTransformersNerPreprocessor(Component):
         startofword_markers.append(0)
         tags_subword.append('X')
         return tokens_subword, startofword_markers, tags_subword
+
+
+@register('split_markups')
+class SplitMarkups:
+    def __init__(self, **kwargs):
+        pass
+    def __call__(self, y_batch):
+        y_types_batch, y_spans_batch = [], []
+        for y_list in y_batch:
+            y_types_list, y_spans_list = [], []
+            for i in range(len(y_list)):
+                if y_list[i].startswith("B-"):
+                    label = y_list[i].split("-")[1]
+                    y_types_list.append(label)
+                    y_spans_list.append("B-ENT")
+                elif y_list[i].startswith("I-"):
+                    label = y_list[i].split("-")[1]
+                    y_types_list.append(label)
+                    y_spans_list.append("I-ENT")
+                else:
+                    y_types_list.append("O")
+                    y_spans_list.append("O")
+            y_types_batch.append(y_types_list)
+            y_spans_batch.append(y_spans_list)
+        return y_types_batch, y_spans_batch
+
+
+@register('merge_markups')
+class MergeMarkups:
+    def __init__(self, tags_file: str, use_o_tag: bool = False, long_ent_thres: float = 0.4,
+                       ent_thres: float = 0.4, top_n: int = 1, include_misc: bool = True, **kwargs):
+        tags_file = str(expand_path(tags_file))
+        self.tags_list = []
+        with open(tags_file, 'r') as fl:
+            lines = fl.readlines()
+            for line in lines:
+                tag, score = line.strip().split()
+                if tag != "O":
+                    self.tags_list.append(tag)
+        self.use_o_tag = use_o_tag
+        self.ent_thres = ent_thres
+        self.long_ent_thres = long_ent_thres
+        self.top_n = top_n
+        self.include_misc = include_misc
+    
+    def __call__(self, tokens_batch, y_types_batch, y_spans_batch):
+        y_batch, entities_batch, entity_positions_batch, entity_tags_batch, entity_probas_batch = [], [], [], [], []
+        for tokens_list, y_types_list, y_spans_list in zip(tokens_batch, y_types_batch, y_spans_batch):
+            y_types_list = y_types_list.tolist()
+            y_list = []
+            tags_with_probas_list = []
+            label = ""
+            conf = 0.0
+            entities_list, entity_positions_list, entity_tags_list, entity_probas_list = [], [], [], []
+            for i in range(len(y_types_list)):
+                if y_spans_list[i].startswith("B-") or (y_spans_list[i].startswith("I-") and \
+                        (i == 0 or (i > 0 and y_spans_list[i - 1] == "O"))):
+                    if "MISC" not in y_spans_list[i] or ("MISC" in y_spans_list[i] and self.include_misc):
+                        tags_with_probas = {tag: 0.0 for tag in self.tags_list}
+                        num_words = 0
+                        if self.use_o_tag:
+                            for k in range(1, len(y_types_list[i])):
+                                tags_with_probas[self.tags_list[k - 1]] += y_types_list[i][k]
+                        else:
+                            for k in range(len(y_types_list[i])):
+                                tags_with_probas[self.tags_list[k]] += y_types_list[i][k]
+                        num_words += 1
+                        for j in range(i + 1, len(y_types_list)):
+                            if y_spans_list[j].startswith("I-"):
+                                if self.use_o_tag:
+                                    for k in range(1, len(y_types_list[j])):
+                                        tags_with_probas[self.tags_list[k - 1]] += y_types_list[j][k]
+                                else:
+                                    for k in range(len(y_types_list[j])):
+                                        tags_with_probas[self.tags_list[k]] += y_types_list[j][k]
+                                num_words += 1
+                            else:
+                                break
+                        tags_with_probas = list(tags_with_probas.items())
+                        tags_with_probas = [(tag, round(proba_sum / num_words, 3)) for tag, proba_sum in tags_with_probas]
+                        tags_with_probas = sorted(tags_with_probas, key=lambda x: x[1], reverse=True)
+                        tags_with_probas_list.append(tags_with_probas)
+                        label = tags_with_probas[0][0]
+                        conf = tags_with_probas[0][1]
+                        if conf > self.long_ent_thres or (num_words <= 2 and conf > self.ent_thres):
+                            y_list.append(f"B-{label}")
+                            entities_list.append(" ".join(tokens_list[i:i + num_words]))
+                            entity_positions_list.append(list(range(i, i + num_words)))
+                            if self.top_n == 1:
+                                entity_tags_list.append(elem[0][0])
+                                entity_probas_list.append(elem[0][1])
+                            else:
+                                entity_tags_list.append([elem[0] for elem in tags_with_probas[:self.top_n]])
+                                entity_probas_list.append([elem[1] for elem in tags_with_probas[:self.top_n]])
+                        else:
+                            y_list.append("O")
+                elif y_spans_list[i].startswith("I-"):
+                    if "MISC" not in y_spans_list[i] or ("MISC" in y_spans_list[i] and self.include_misc):
+                        if conf > self.long_ent_thres or (num_words <= 2 and conf > self.ent_thres):
+                            y_list.append(f"I-{label}")
+                        else:
+                            y_list.append("O")
+                else:
+                    y_list.append("O")
+                    label = ""
+                    conf = 0.0
+            y_batch.append(y_list)
+            entities_batch.append(entities_list)
+            entity_positions_batch.append(entity_positions_list)
+            entity_tags_batch.append(entity_tags_list)
+            entity_probas_batch.append(entity_probas_list)
+        return y_batch, entities_batch, entity_positions_batch, entity_tags_batch, entity_probas_batch

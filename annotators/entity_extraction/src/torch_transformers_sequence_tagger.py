@@ -18,8 +18,9 @@ from typing import List, Union, Dict, Optional
 
 import numpy as np
 import torch
+from torch import nn
 from overrides import overrides
-from transformers import AutoModelForTokenClassification, AutoConfig
+from transformers import AutoModelForTokenClassification, AutoConfig, AutoModel
 
 from deeppavlov.core.commands.utils import expand_path
 from deeppavlov.core.common.errors import ConfigError
@@ -193,6 +194,53 @@ def token_labels_to_subtoken_labels(labels, y_mask, input_mask):
     return subtoken_labels
 
 
+class AutoModelForTwoHeadTokenClassification(nn.Module):
+    def __init__(self, pretrained_bert: str, config: AutoConfig, num_tags_seq: int, num_tags_ent: int,
+                       classifier_dropout: float = 0.1):
+        super().__init__()
+        self.pretrained_bert = pretrained_bert
+        self.encoder = AutoModel.from_pretrained(self.pretrained_bert, config=config)
+        self.dropout = nn.Dropout(classifier_dropout)
+        self.num_tags_seq = num_tags_seq
+        self.num_tags_ent = num_tags_ent
+        self.fc_seq = nn.Linear(config.hidden_size, num_tags_seq)
+        self.fc_ent = nn.Linear(config.hidden_size, num_tags_ent)
+    
+    def forward(self, input_ids, attention_mask, seq_labels=None, ent_labels=None):
+        
+        transf_output = self.encoder(input_ids, attention_mask, output_attentions=True)
+        output = transf_output.last_hidden_state
+        output = self.dropout(output)
+        bs, seq_len, emb = output.size()
+        
+        seq_logits = self.fc_seq(output)
+        ent_logits = self.fc_ent(output)
+        
+        loss = None
+        if seq_labels is not None:
+            loss_fct = torch.nn.CrossEntropyLoss()
+            if seq_attention_mask is not None:
+                seq_active_loss = seq_attention_mask.view(-1) == 1
+                seq_active_logits = seq_logits.view(-1, self.num_tags_seq)
+                seq_active_labels = torch.where(
+                    seq_active_loss, seq_labels.view(-1), torch.tensor(loss_fct.ignore_index).type_as(seq_labels)
+                )
+                seq_loss = loss_fct(seq_active_logits, seq_active_labels)
+                
+                ent_active_loss = ent_labels.view(-1) > 0
+                ent_labels = ent_labels - 1
+                ent_active_logits = ent_logits.view(-1, self.num_tags_ent)
+                ent_active_labels = torch.where(
+                    ent_active_loss, ent_labels.view(-1), torch.tensor(loss_fct.ignore_index).type_as(ent_labels)
+                )
+                ent_loss = loss_fct(ent_active_logits, ent_active_labels)
+                
+            loss = seq_loss + ent_loss
+            return loss
+        else:
+            return seq_logits, ent_logits
+
+
 @register('torch_transformers_sequence_tagger')
 class TorchTransformersSequenceTagger(TorchModel):
     """Transformer-based model on PyTorch for text tagging. It predicts a label for every token (not subtoken)
@@ -219,6 +267,7 @@ class TorchTransformersSequenceTagger(TorchModel):
     def __init__(self,
                  n_tags: int,
                  pretrained_bert: str,
+                 n_tags_ent: int = None,
                  bert_config_file: Optional[str] = None,
                  return_probas: bool = False,
                  attention_probs_keep_prob: Optional[float] = None,
@@ -230,13 +279,16 @@ class TorchTransformersSequenceTagger(TorchModel):
                  load_before_drop: bool = True,
                  clip_norm: Optional[float] = None,
                  min_learning_rate: float = 1e-07,
+                 two_heads: bool = False,
                  **kwargs) -> None:
 
         self.n_classes = n_tags
+        self.n_tags_ent = n_tags_ent
         self.return_probas = return_probas
         self.attention_probs_keep_prob = attention_probs_keep_prob
         self.hidden_keep_prob = hidden_keep_prob
         self.clip_norm = clip_norm
+        self.two_heads = two_heads
 
         self.pretrained_bert = pretrained_bert
         self.bert_config_file = bert_config_file
@@ -253,7 +305,8 @@ class TorchTransformersSequenceTagger(TorchModel):
                        input_ids: Union[List[List[int]], np.ndarray],
                        input_masks: Union[List[List[int]], np.ndarray],
                        y_masks: Union[List[List[int]], np.ndarray],
-                       y: List[List[int]],
+                       seq_y: List[List[int]],
+                       ent_y: List[List[int]],
                        *args, **kwargs) -> Dict[str, float]:
         """
 
@@ -272,14 +325,19 @@ class TorchTransformersSequenceTagger(TorchModel):
         """
         b_input_ids = torch.from_numpy(input_ids).to(self.device)
         b_input_masks = torch.from_numpy(input_masks).to(self.device)
-        subtoken_labels = [token_labels_to_subtoken_labels(y_el, y_mask, input_mask)
-                           for y_el, y_mask, input_mask in zip(y, y_masks, input_masks)]
-        b_labels = torch.from_numpy(np.array(subtoken_labels)).to(torch.int64).to(self.device)
-        self.optimizer.zero_grad()
+        seq_subtoken_labels = [token_labels_to_subtoken_labels(y_el, y_mask, input_mask)
+                                for y_el, y_mask, input_mask in zip(seq_y, y_masks, input_masks)]
+        seq_b_labels = torch.from_numpy(np.array(seq_subtoken_labels)).to(torch.int64).to(self.device)
 
-        loss = self.model(input_ids=b_input_ids,
-                          attention_mask=b_input_masks,
-                          labels=b_labels).loss
+        self.optimizer.zero_grad()
+        if self.two_heads:
+            ent_subtoken_labels = [token_labels_to_subtoken_labels(y_el, y_mask, input_mask)
+                                for y_el, y_mask, input_mask in zip(ent_y, y_masks, input_masks)]
+            ent_b_labels = torch.from_numpy(np.array(ent_subtoken_labels)).to(torch.int64).to(self.device)
+            loss = self.model(input_ids=b_input_ids, attention_mask=b_input_masks,
+                              seq_labels=seq_b_labels, ent_labels=ent_b_labels)
+        else:
+            loss = self.model(input_ids=b_input_ids, attention_mask=b_input_masks, labels=seq_b_labels).loss
         loss.backward()
         # Clip the norm of the gradients to 1.0.
         # This is to help prevent the "exploding gradients" problem.
@@ -315,33 +373,41 @@ class TorchTransformersSequenceTagger(TorchModel):
             logits = self.model(b_input_ids, attention_mask=b_input_masks)
 
             # Move logits and labels to CPU and to numpy arrays
-            logits = token_from_subtoken(logits[0].detach().cpu(), torch.from_numpy(y_masks))
+            seq_logits = token_from_subtoken(logits[0].detach().cpu(), torch.from_numpy(y_masks))
+            if self.two_heads:
+                ent_logits = token_from_subtoken(logits[1].detach().cpu(), torch.from_numpy(y_masks))
 
-        probas = torch.nn.functional.softmax(logits, dim=-1)
-        probas = probas.detach().cpu().numpy()
-
-        logits = logits.detach().cpu().numpy()
-        pred = np.argmax(logits, axis=-1)
         seq_lengths = np.sum(y_masks, axis=1)
-        pred = [p[:l] for l, p in zip(seq_lengths, pred)]
-
-        if self.return_probas:
-            return pred, probas
+        
+        seq_probas = torch.nn.functional.softmax(seq_logits, dim=-1)
+        seq_probas = seq_probas.detach().cpu().numpy()
+        seq_logits = seq_logits.detach().cpu().numpy()
+        seq_pred = np.argmax(seq_logits, axis=-1)
+        seq_pred = [p[:l] for l, p in zip(seq_lengths, seq_pred)]
+        
+        if self.two_heads:
+            ent_pred = torch.nn.functional.softmax(ent_logits, dim=-1)
+            ent_pred = ent_pred.detach().cpu().numpy()
+            return seq_pred, ent_pred
         else:
-            return pred
-
-        return pred
+            if self.return_probas:
+                return seq_probas
+            else:
+                return seq_pred
 
     @overrides
     def load(self, fname=None):
         if fname is not None:
             self.load_path = fname
 
-        self.pretrained_bert = str(expand_path(self.pretrained_bert))
         if self.pretrained_bert:
             config = AutoConfig.from_pretrained(self.pretrained_bert, num_labels=self.n_classes,
                                                 output_attentions=False, output_hidden_states=False)
-            self.model = AutoModelForTokenClassification.from_pretrained(self.pretrained_bert, config=config)
+            if self.two_heads:
+                self.model = AutoModelForTwoHeadTokenClassification(self.pretrained_bert, config, self.n_classes,
+                                                                    self.n_tags_ent)
+            else:
+                self.model = AutoModelForTokenClassification.from_pretrained(self.pretrained_bert, config=config)
         elif self.bert_config_file and Path(self.bert_config_file).is_file():
             self.bert_config = AutoConfig.from_json_file(str(expand_path(self.bert_config_file)))
 
@@ -376,7 +442,7 @@ class TorchTransformersSequenceTagger(TorchModel):
                 log.info(f"Loading weights from {weights_path}.")
                 checkpoint = torch.load(weights_path, map_location=self.device)
                 self.model.load_state_dict(checkpoint["model_state_dict"])
-                self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+                #self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
                 self.epochs_done = checkpoint.get("epochs_done", 0)
             else:
                 log.info(f"Init from scratch. Load path {weights_path} does not exist.")
