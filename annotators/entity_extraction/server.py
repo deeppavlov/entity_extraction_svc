@@ -1,9 +1,10 @@
+import json
 import logging
 import os
 import re
 import time
 import uvicorn
-from typing import List, Optional
+from typing import Any, List, Optional, Dict
 from fastapi import FastAPI, File, UploadFile
 from filelock import FileLock, Timeout
 from pydantic import BaseModel
@@ -38,6 +39,14 @@ except Exception as e:
 
 class Payload(BaseModel):
     texts: List[str]
+
+
+class TypesAndRels(BaseModel):
+    relation_info: Dict[str, Any]
+
+
+class TripletsList(BaseModel):
+    triplets: List[str]
 
 
 @app.post("/entity_extraction")
@@ -75,7 +84,7 @@ async def entity_detection(payload: Payload):
 
 
 @app.post("/add_entity")
-async def add_entity(payload):
+async def add_entity(payload: Payload):
     entity_label = payload.entity_label
     entity_id = payload.entity_id
     num_rels = payload.num_rels
@@ -88,19 +97,27 @@ async def add_entity(payload):
 label_rel, type_rel, types_to_tags = "", "", {}
 
 @app.post("/kb_schema")
-async def db_schema(payload):
-    label_rel = payload.label_rel
-    type_rel = payload.type_rel
-    types_to_tags = payload.types_to_tags
+async def db_schema(payload: TypesAndRels):
+    logger.info(f"payload {payload}")
+    relations = payload.relation_info
+    label_rel = relations.get("label_rel", "")
+    type_rel = relations.get("type_rel", "")
+    types_to_tags = relations.get("types_to_tags", [])
+    os.environ["label_rel"] = label_rel
+    os.environ["type_rel"] = type_rel
+    os.environ["types_to_tags"] = str(types_to_tags)
 
 
 @app.post("/add_kb")
-async def add_kb(fl: Optional[UploadFile] = File(None)):
-    if fl:
-        kb_data = await fl.read()
-        kb_triplets = kb_data.strip("\n").split("\n")
-        if label_rel and type_rel and types_to_tags:
-            el[0].parse_custom_database(kb_triplets, label_rel, type_rel, types_to_tags)
+async def add_kb(payload: TripletsList):
+    triplets_list = payload.triplets
+    label_rel = os.getenv("label_rel", "")
+    type_rel = os.getenv("type_rel", "")
+    types_to_tags = json.loads(os.getenv("types_to_tags", "[]"))
+    if label_rel:
+        el[0].parse_custom_database(triplets_list, label_rel, type_rel, types_to_tags)
+        ner[1].ner[6].ent_thres = 0.2
+        logger.info(f"------- ner {ner[1].ner[6].ent_thres}")
 
 
 uvicorn.run(app, host='0.0.0.0', port=9103)

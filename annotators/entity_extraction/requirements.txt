@@ -7,4 +7,5 @@ sentry-sdk==0.12.3
 rapidfuzz==0.7.6
 torch==1.6.0
 transformers==4.6.0
-deeppavlov==0.17.2
+deeppavlov==0.17.3
+python-multipart
