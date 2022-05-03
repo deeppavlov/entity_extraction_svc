@@ -1,9 +1,9 @@
-FROM python:3.7.6
+FROM tensorflow/tensorflow:1.15.2-gpu
 
-RUN apt-get -y update && \
-    apt-get install -y build-essential libssl-dev zlib1g-dev libbz2-dev \
-libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev \
-xz-utils tk-dev libffi-dev liblzma-dev python-openssl git
+
+RUN apt-get -y update
+RUN apt-get install -y build-essential zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev wget llvm \
+    libncurses5-dev libncursesw5-dev xz-utils libffi-dev liblzma-dev
 
 RUN apt-get install -y sqlite3
 

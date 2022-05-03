@@ -1,7 +1,9 @@
+import datetime
 import json
 import logging
 import os
 import re
+import subprocess
 import time
 import uvicorn
 from typing import Any, List, Optional, Dict
@@ -11,6 +13,7 @@ from pydantic import BaseModel
 from starlette.exceptions import HTTPException
 from starlette.middleware.cors import CORSMiddleware
 from deeppavlov import build_model
+from train import evaluate, ner_config, metrics_filename, LOCKFILE, LOG_PATH
 
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -118,6 +121,37 @@ async def add_kb(payload: TripletsList):
         el[0].parse_custom_database(triplets_list, label_rel, type_rel, types_to_tags)
         ner[1].ner[6].ent_thres = 0.2
         logger.info(f"------- ner {ner[1].ner[6].ent_thres}")
+
+
+@app.post("/train")
+async def model_training(fl: Optional[UploadFile] = File(None)):
+    data_path = "''"
+    logger.info('Trying to start training')
+    if fl:
+        total_data = json.loads(await fl.read())
+        if isinstance(total_data, list):
+            train_data = total_data[:int(len(total_data) * 0.9)]
+            test_data = total_data[int(len(total_data) * 0.9):]
+        elif isinstance(total_data, dict) and "train" in total_data and "test" in total_data:
+            train_data = total_data["train"]
+            test_data = total_data["test"]
+        else:
+            raise HTTPException(status_code=400, detail="Train data should be either list with examples or dict with"
+                                                        "'train' and 'test' keys")
+        logger.info(f"train data {len(train_data)} test data {len(test_data)}")
+        data_path = "/tmp/train_filename.json"
+        with open(data_path, 'w', encoding="utf8") as out:
+            json.dump({"train": train_data, "valid": test_data, "test": test_data},
+                      out, indent=2, ensure_ascii=False)
+    try:
+        with FileLock(LOCKFILE, timeout=1):
+            logfile = LOG_PATH / f'{datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")}.log'
+            subprocess.Popen(['/bin/bash', '-c', f'python train.py {data_path}> {logfile} 2>&1'])
+    except Timeout:
+        logger.error("Can't start training since process is already running.")
+        return {"success": False, "message": "Last training was not finished."}
+
+    return {"success": True, "message": "Training started"}
 
 
 uvicorn.run(app, host='0.0.0.0', port=9103)

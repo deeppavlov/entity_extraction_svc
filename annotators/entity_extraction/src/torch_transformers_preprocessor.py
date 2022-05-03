@@ -235,9 +235,9 @@ class MergeMarkups:
         self.top_n = top_n
         self.include_misc = include_misc
     
-    def __call__(self, tokens_batch, y_types_batch, y_spans_batch):
+    def __call__(self, tokens_batch, y_types_batch, y_spans_batch, y_true_batch):
         y_batch, entities_batch, entity_positions_batch, entity_tags_batch, entity_probas_batch = [], [], [], [], []
-        for tokens_list, y_types_list, y_spans_list in zip(tokens_batch, y_types_batch, y_spans_batch):
+        for tokens_list, y_types_list, y_spans_list, y_true_list in zip(tokens_batch, y_types_batch, y_spans_batch, y_true_batch):
             y_types_list = y_types_list.tolist()
             y_list = []
             tags_with_probas_list = []
@@ -279,19 +279,23 @@ class MergeMarkups:
                             entities_list.append(" ".join(tokens_list[i:i + num_words]))
                             entity_positions_list.append(list(range(i, i + num_words)))
                             if self.top_n == 1:
-                                entity_tags_list.append(elem[0][0])
-                                entity_probas_list.append(elem[0][1])
+                                entity_tags_list.append(tags_with_probas[0][0])
+                                entity_probas_list.append(tags_with_probas[0][1])
                             else:
                                 entity_tags_list.append([elem[0] for elem in tags_with_probas[:self.top_n]])
                                 entity_probas_list.append([elem[1] for elem in tags_with_probas[:self.top_n]])
                         else:
                             y_list.append("O")
+                    else:
+                        y_list.append("O")
                 elif y_spans_list[i].startswith("I-"):
                     if "MISC" not in y_spans_list[i] or ("MISC" in y_spans_list[i] and self.include_misc):
                         if conf > self.long_ent_thres or (num_words <= 2 and conf > self.ent_thres):
                             y_list.append(f"I-{label}")
                         else:
                             y_list.append("O")
+                    else:
+                        y_list.append("O")
                 else:
                     y_list.append("O")
                     label = ""
