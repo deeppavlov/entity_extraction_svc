@@ -235,9 +235,9 @@ class MergeMarkups:
         self.top_n = top_n
         self.include_misc = include_misc
     
-    def __call__(self, tokens_batch, y_types_batch, y_spans_batch, y_true_batch):
+    def __call__(self, tokens_batch, y_types_batch, y_spans_batch):
         y_batch, entities_batch, entity_positions_batch, entity_tags_batch, entity_probas_batch = [], [], [], [], []
-        for tokens_list, y_types_list, y_spans_list, y_true_list in zip(tokens_batch, y_types_batch, y_spans_batch, y_true_batch):
+        for tokens_list, y_types_list, y_spans_list in zip(tokens_batch, y_types_batch, y_spans_batch):
             y_types_list = y_types_list.tolist()
             y_list = []
             tags_with_probas_list = []
