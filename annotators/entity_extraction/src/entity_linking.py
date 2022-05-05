@@ -902,7 +902,7 @@ class EntityLinker(Component, Serializable):
                 for entity, (substr_score, num_rels, page, types, locations, types_of_sport, triplets_info) in entities_scores:
                     objects, triplets = set(), set()
                     if isinstance(triplets_info, str):
-                        rel_objects = triplets_str.split("---")
+                        rel_objects = triplets_info.split("---")
                         rel_objects = [elem.split() for elem in rel_objects]
                     else:
                         rel_objects = triplets_info
