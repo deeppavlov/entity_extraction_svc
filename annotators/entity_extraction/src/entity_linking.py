@@ -333,8 +333,10 @@ class EntityLinker(Component, Serializable):
                 entity_tags_dict, init_cand_ent_scores_dict = self.get_cand_ent_customdb(entity_substr_list,
                     entity_substr_split_list, entity_sent_list, tags_with_probas_list, sentences_list)
             else:
+                tm_st = time.time()
                 entity_tags_dict, init_cand_ent_scores_dict = self.get_cand_ent_wikidata(entity_substr_list,
                     entity_substr_split_list, entity_sent_list, tags_with_probas_list, sentences_list)
+                log.warning(f"candidate entities retrieve time: {time.time() - tm_st}")
             
             log.info(f"entity_tags_dict {entity_tags_dict}")
             for n in range(len(entity_substr_list)):
@@ -758,8 +760,7 @@ class EntityLinker(Component, Serializable):
     def find_fuzzy_match_pickle(self, entity_substr, tags, rels_dict=None):
         cand_ids_info = {}
         cand_ids_set = set()
-        entity_substr_split = entity_substr.split()
-        for word in entity_substr_split:
+        for word in entity_substr:
             if len(word) > 1 and word not in self.stopwords and word in self.word_to_q:
                 cand_ids = self.word_to_q[word]
                 if tags:
@@ -774,7 +775,7 @@ class EntityLinker(Component, Serializable):
             p131 = tuple(self.p131_dict.get(entity_id, []))
             p641 = tuple(self.p641_dict.get(entity_id, []))
             for name in names:
-                substr_score = self.calc_substr_score(entity_id, name, entity_substr_split, tags)
+                substr_score = self.calc_substr_score(entity_id, name, entity_substr, tags)
                 if entity_id in cand_ids_info:
                     cand_ids_info[entity_id].add((substr_score, num_rels, page, types, p131, p641))
                 else:
