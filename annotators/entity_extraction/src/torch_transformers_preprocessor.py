@@ -283,7 +283,7 @@ class MergeMarkups:
                         if conf > self.long_ent_thres or (num_words <= 2 and conf > self.ent_thres):
                             y_list.append(f"B-{label}")
                             new_entity = " ".join(tokens_list[i:i + num_words])
-                            if new_entity in not self.stopwords:
+                            if new_entity not in self.stopwords:
                                 entities_list.append(new_entity)
                                 entity_positions_list.append(list(range(i, i + num_words)))
                                 if self.top_n == 1:
