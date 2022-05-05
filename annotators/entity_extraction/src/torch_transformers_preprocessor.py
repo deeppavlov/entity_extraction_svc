@@ -22,6 +22,7 @@ import torch
 from typing import Tuple, List, Optional, Union, Dict, Set
 
 import numpy as np
+from nltk.corpus import stopwords
 from transformers import AutoTokenizer
 from transformers.data.processors.utils import InputFeatures
 
@@ -220,7 +221,7 @@ class SplitMarkups:
 @register('merge_markups')
 class MergeMarkups:
     def __init__(self, tags_file: str, use_o_tag: bool = False, long_ent_thres: float = 0.4,
-                       ent_thres: float = 0.4, top_n: int = 1, include_misc: bool = True, **kwargs):
+                       ent_thres: float = 0.4, top_n: int = 1, include_misc: bool = True, lang: str = "en", **kwargs):
         tags_file = str(expand_path(tags_file))
         self.tags_list = []
         with open(tags_file, 'r') as fl:
@@ -234,6 +235,11 @@ class MergeMarkups:
         self.long_ent_thres = long_ent_thres
         self.top_n = top_n
         self.include_misc = include_misc
+        self.lang = lang
+        if self.lang == "en":
+            self.stopwords = set(stopwords.words("english"))
+        else:
+            self.stopwords = set(stopwords.words("russian"))
     
     def __call__(self, tokens_batch, y_types_batch, y_spans_batch):
         y_batch, entities_batch, entity_positions_batch, entity_tags_batch, entity_probas_batch = [], [], [], [], []
@@ -276,14 +282,16 @@ class MergeMarkups:
                         conf = tags_with_probas[0][1]
                         if conf > self.long_ent_thres or (num_words <= 2 and conf > self.ent_thres):
                             y_list.append(f"B-{label}")
-                            entities_list.append(" ".join(tokens_list[i:i + num_words]))
-                            entity_positions_list.append(list(range(i, i + num_words)))
-                            if self.top_n == 1:
-                                entity_tags_list.append(tags_with_probas[0][0])
-                                entity_probas_list.append(tags_with_probas[0][1])
-                            else:
-                                entity_tags_list.append([elem[0] for elem in tags_with_probas[:self.top_n]])
-                                entity_probas_list.append([elem[1] for elem in tags_with_probas[:self.top_n]])
+                            new_entity = " ".join(tokens_list[i:i + num_words])
+                            if new_entity in not self.stopwords:
+                                entities_list.append(new_entity)
+                                entity_positions_list.append(list(range(i, i + num_words)))
+                                if self.top_n == 1:
+                                    entity_tags_list.append(tags_with_probas[0][0])
+                                    entity_probas_list.append(tags_with_probas[0][1])
+                                else:
+                                    entity_tags_list.append([elem[0] for elem in tags_with_probas[:self.top_n]])
+                                    entity_probas_list.append([elem[1] for elem in tags_with_probas[:self.top_n]])
                         else:
                             y_list.append("O")
                     else:
