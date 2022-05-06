@@ -3,11 +3,12 @@ services:
     env_file: [.env]
     build:
       args:
-        CONFIG: pipeline.json
         PORT: 9999
         SRC_DIR: agent/
       context: ./
       dockerfile: agent/Dockerfile
+    volumes:
+      - ./agent:/src
     ports:
       - 9999:9999
     deploy:

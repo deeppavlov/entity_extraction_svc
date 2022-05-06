@@ -1,10 +1,8 @@
-FROM python:3.7.6
+FROM python:3.9
 
-ARG CONFIG
 ARG PORT
 ARG SRC_DIR
 
-ENV CONFIG=$CONFIG
 ENV PORT=$PORT
 
 COPY ./agent/requirements.txt /src/requirements.txt
@@ -13,4 +11,4 @@ RUN pip install -r /src/requirements.txt
 COPY $SRC_DIR /src
 WORKDIR /src
 
-CMD python -m deeppavlov riseapi $CONFIG -p $PORT
+CMD uvicorn server:app --host 0.0.0.0 --port $PORT --reload
