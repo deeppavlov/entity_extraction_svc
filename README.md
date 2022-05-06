@@ -10,10 +10,10 @@ Entity extraction API powered by DeepPavlov configs.
 Main gateway (with Swagger UI) is available at http://localhost:9999/
 
 
-#### POST `/model`
+#### POST `/`
 ```json
 {
-  "text": [
+  "texts": [
     "what is the capital of Great Britain?"
   ]
 }
