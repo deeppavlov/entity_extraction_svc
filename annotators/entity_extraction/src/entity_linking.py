@@ -546,6 +546,13 @@ class EntityLinker(Component, Serializable):
                     break
             elif len(entity_substr_list) > 2 and tag_proba > 0.1:
                 tags_for_search.append(tag)
+        add_tags = []
+        for tag in tags_for_search:
+            if tag in self.related_tags:
+                add_tags += self.related_tags[tag]
+        tags_for_search += add_tags
+        if tags_with_probas and tags_with_probas[0][0] < 0.9 and tags_with_probas[0][1] in {"OCCUPATION", "CHEMICAL_ELEMENT"}:
+            tags_for_search.append("MISC")
         return tags_for_search
     
     def correct_tags(self, entity_substr, tags_for_search, tags_with_probas):
