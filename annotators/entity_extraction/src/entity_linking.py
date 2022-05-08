@@ -125,6 +125,8 @@ class EntityLinker(Component, Serializable):
         self.q_to_page_filename = q_to_page_filename
         self.wikidata_filename = wikidata_filename
         self.load()
+        self.sum_tm = 0.0
+        self.num_entities = 0
 
     def load(self) -> None:
         if self.db_format == "sqlite":
@@ -320,7 +322,7 @@ class EntityLinker(Component, Serializable):
                             sentences_list: List[str],
                             sentences_offsets_list: List[List[int]]) -> List[List[str]]:
         log.info(f"entity_substr_list {entity_substr_list} tags_with_probas_list {tags_with_probas_list}")
-        entity_ids_list, conf_list, pages_list = [], [], []
+        entity_ids_list, entity_tags_list, conf_list, pages_list = [], [], [], []
         if entity_substr_list:
             entities_scores_list = []
             cand_ent_scores_list, cand_ent_scores_init_list = [], []
@@ -328,7 +330,7 @@ class EntityLinker(Component, Serializable):
                                    if word not in self.stopwords and len(word) > 1]
                                   for entity_substr in entity_substr_list]
             tm1 = time.time()
-            init_cand_ent_scores_list, entity_tags_list = [], []
+            init_cand_ent_scores_list = []
             if self.using_custom_db:
                 entity_tags_dict, init_cand_ent_scores_dict = self.get_cand_ent_customdb(entity_substr_list,
                     entity_substr_split_list, entity_sent_list, tags_with_probas_list, sentences_list)
@@ -336,7 +338,9 @@ class EntityLinker(Component, Serializable):
                 tm_st = time.time()
                 entity_tags_dict, init_cand_ent_scores_dict = self.get_cand_ent_wikidata(entity_substr_list,
                     entity_substr_split_list, entity_sent_list, tags_with_probas_list, sentences_list)
-                log.warning(f"candidate entities retrieve time: {time.time() - tm_st}")
+                self.sum_tm += time.time() - tm_st
+                self.num_entities += len(entity_substr_list)
+                log.warning(f"candidate entities retrieve time: {time.time() - tm_st} --- sum tm {self.sum_tm} num entities {self.num_entities}")
             
             log.info(f"entity_tags_dict {entity_tags_dict}")
             for n in range(len(entity_substr_list)):
@@ -350,7 +354,8 @@ class EntityLinker(Component, Serializable):
                 cand_ent_scores_list.append(cand_ent_scores)
                 cand_ent_scores_init_list.append(cand_ent_scores_init)
                 entity_ids = [elem[0] for elem in cand_ent_scores]
-                conf = [elem[1:] for elem in cand_ent_scores]
+                conf = [elem[1][:2] for elem in cand_ent_scores]
+                pages = [elem[1][2] for elem in cand_ent_scores]
                 entities_scores_list.append({ent: score for ent, score in cand_ent_scores})
                 for ent, scores in cand_ent_scores_init:
                     if isinstance(scores[3], str):
@@ -359,7 +364,7 @@ class EntityLinker(Component, Serializable):
                         entities_types_dict[ent] = scores[3]
                 entity_ids_list.append(entity_ids)
                 conf_list.append(conf)
-                
+                pages_list.append(pages)
             if self.use_connections:
                 tm1 = time.time()
                 entities_with_conn_scores_list, entities_scores_list = \
@@ -722,13 +727,14 @@ class EntityLinker(Component, Serializable):
         if self.delete_hyphens:
             entity_substr = entity_substr.replace("-", " ").replace("'", " ")
         entity_substr_split = entity_substr.split()
+        entities_and_ids = []
         cand_ent_init = defaultdict(set)
-        entity_substr = entity_substr.replace('.', '').replace(',', '')
-        
-        query_str = self.make_query_str(entity_substr, tags, rels_dict)
-        log.info(f"query_str {query_str} entity_substr {entity_substr}")
-        res = self.cur.execute("SELECT * FROM inverted_index WHERE inverted_index MATCH '{}';".format(query_str))
-        entities_and_ids = res.fetchall()
+        entity_substr = entity_substr.replace('.', '').replace(',', '').strip()
+        if entity_substr:
+            query_str = self.make_query_str(entity_substr, tags, rels_dict)
+            log.info(f"query_str {query_str} entity_substr {entity_substr}")
+            res = self.cur.execute("SELECT * FROM inverted_index WHERE inverted_index MATCH '{}';".format(query_str))
+            entities_and_ids = res.fetchall()
         if entities_and_ids:
             cand_ent_init = self.process_cand_ent(cand_ent_init, entities_and_ids, entity_substr_split, tags)
         
