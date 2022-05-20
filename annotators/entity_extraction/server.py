@@ -57,14 +57,21 @@ async def entity_extraction(payload: Payload):
     st_time = time.time()
     texts = payload.texts
     entity_info = {}
-    try:
-        entity_substr, entity_offsets, entity_positions, tags, sentences_offsets, sentences, probas = ner(texts)
+    #try:
+    entity_substr, entity_offsets, entity_positions, tags, sentences_offsets, sentences, probas = ner(texts)
+    if el_config_name == "entity_linking_en.json":
         entity_ids, entity_tags, entity_conf, entity_pages = \
             el(entity_substr, tags, sentences, entity_offsets, sentences_offsets, probas)
         entity_info = {"entity_substr": entity_substr, "entity_offsets": entity_offsets, "entity_ids": entity_ids,
                        "entity_tags": tags, "entity_conf": entity_conf, "entity_pages": entity_pages}
-    except Exception as e:
-        logger.exception(e)
+    elif el_config_name == "entity_linking_en_full.json":
+        entity_ids, entity_tags, entity_conf, entity_pages, image_links, categories, first_pars = \
+            el(entity_substr, tags, sentences, entity_offsets, sentences_offsets, probas)
+        entity_info = {"entity_substr": entity_substr, "entity_offsets": entity_offsets, "entity_ids": entity_ids,
+                       "entity_tags": tags, "entity_conf": entity_conf, "entity_pages": entity_pages,
+                       "image_links": image_links, "categories": categories, "first_paragraphs": first_pars}
+    #except Exception as e:
+    #    logger.exception(e)
     total_time = time.time() - st_time
     logger.info(f"entity linking exec time = {total_time:.3f}s")
     return entity_info

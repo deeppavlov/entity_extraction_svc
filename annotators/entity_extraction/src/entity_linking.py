@@ -71,6 +71,7 @@ class EntityLinker(Component, Serializable):
                  types_dict_filename: str = None,
                  q_to_page_filename: str = None,
                  wikidata_filename: str = None,
+                 return_additional_info: bool = False,
                  **kwargs) -> None:
         """
 
@@ -124,6 +125,7 @@ class EntityLinker(Component, Serializable):
         self.types_dict_filename = types_dict_filename
         self.q_to_page_filename = q_to_page_filename
         self.wikidata_filename = wikidata_filename
+        self.return_additional_info = return_additional_info
         self.load()
         self.sum_tm = 0.0
         self.num_entities = 0
@@ -304,7 +306,13 @@ class EntityLinker(Component, Serializable):
             entity_tags_batch.append(entity_tags_list)
             entity_conf_batch.append(entity_conf_list)
             entity_pages_batch.append(entity_pages_list)
-        return entity_ids_batch, entity_tags_batch, entity_conf_batch, entity_pages_batch
+
+        images_link_batch, categories_batch, first_par_batch = self.extract_additional_info(entity_ids_batch)
+        if self.return_additional_info:
+            return entity_ids_batch, entity_tags_batch, entity_conf_batch, entity_pages_batch, images_link_batch, \
+                categories_batch, first_par_batch
+        else:
+            return entity_ids_batch, entity_tags_batch, entity_conf_batch, entity_pages_batch
     
     def entity_offsets(self, entity_substr_list, sentences_list):
         text = " ".join(sentences_list).lower()
@@ -1182,3 +1190,28 @@ class EntityLinker(Component, Serializable):
                 entities_conn_scores_list[i][entity] = tuple(confs)
         
         return entities_with_conn_scores_list, entities_conn_scores_list
+
+    def extract_additional_info(self, entity_ids_batch):
+        images_link_batch, categories_batch, first_par_batch = [], [], []
+        for entity_ids_list in entity_ids_batch:
+            images_link_list, categories_list, first_par_list = [], [], []
+            for entity_ids in entity_ids_list:
+                images_links, categories, first_pars = [], [], []
+                for entity_id in entity_ids:
+                    res = self.cur.execute("SELECT * FROM entity_additional_info WHERE entity_id='{}';".format(entity_id))
+                    entity_info = res.fetchall()
+                    if entity_info:
+                        images_links.append(entity_info[0][1])
+                        categories.append(entity_info[0][2].split("\t"))
+                        first_pars.append(entity_info[0][3])
+                    else:
+                        images_links.append("")
+                        categories.append([])
+                        first_pars.append("")
+                images_link_list.append(images_links)
+                categories_list.append(categories)
+                first_par_list.append(first_pars)
+            images_link_batch.append(images_link_list)
+            categories_batch.append(categories_list)
+            first_par_batch.append(first_par_list)
+        return images_link_batch, categories_batch, first_par_batch

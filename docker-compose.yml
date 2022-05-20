@@ -22,7 +22,7 @@ services:
     build:
       args:
         NER_CONFIG: entity_detection_en.json
-        EL_CONFIG: entity_linking_en.json
+        EL_CONFIG: entity_linking_en_full.json
         PORT: 9103
         SRC_DIR: annotators/entity_extraction/
       context: ./
