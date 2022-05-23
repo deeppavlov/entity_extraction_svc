@@ -1,6 +1,8 @@
 ## Entity Extraction Service
 Entity extraction API powered by DeepPavlov configs.
 
+![](docs/logo.png)
+
 
 ## Run with docker-compose
 `docker-compose up --build`
