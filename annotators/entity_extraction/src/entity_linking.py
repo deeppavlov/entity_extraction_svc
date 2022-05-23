@@ -298,9 +298,9 @@ class EntityLinker(Component, Serializable):
                 sentences_offsets_list, tags_with_probas_list in \
                 zip(entity_substr_batch, entity_offsets_batch, entity_sent_batch, sentences_batch,
                     sentences_offsets_batch, tags_with_probas_batch):
-            entity_ids_list, entity_tags_list, entity_conf_list, entity_pages_list = \
-                self.link_entities(entity_substr_list, entity_offsets_list, entity_sent_list, tags_with_probas_list, sentences_list,
-                                   sentences_offsets_list)
+            entity_ids_list, substr_tags_list, entity_conf_list, entity_tags_list, entity_pages_list = \
+                self.link_entities(entity_substr_list, entity_offsets_list, entity_sent_list, tags_with_probas_list,
+                                   sentences_list, sentences_offsets_list)
             log.info(f"entity_ids_list {entity_ids_list[:10]} entity_conf_list {entity_conf_list[:10]}")
             entity_ids_batch.append(entity_ids_list)
             entity_tags_batch.append(entity_tags_list)
@@ -330,7 +330,7 @@ class EntityLinker(Component, Serializable):
                             sentences_list: List[str],
                             sentences_offsets_list: List[List[int]]) -> List[List[str]]:
         log.info(f"entity_substr_list {entity_substr_list} tags_with_probas_list {tags_with_probas_list}")
-        entity_ids_list, entity_tags_list, conf_list, pages_list = [], [], [], []
+        entity_ids_list, substr_tags_list, conf_list, entity_tags_list, pages_list = [], [], [], [], []
         if entity_substr_list:
             entities_scores_list = []
             cand_ent_scores_list, cand_ent_scores_init_list = [], []
@@ -353,10 +353,10 @@ class EntityLinker(Component, Serializable):
             log.info(f"entity_tags_dict {entity_tags_dict}")
             for n in range(len(entity_substr_list)):
                 init_cand_ent_scores_list.append(init_cand_ent_scores_dict[n])
-                entity_tags_list.append(entity_tags_dict[n])
+                substr_tags_list.append(entity_tags_dict[n])
                 
             entities_types_dict = {}
-            for entity_substr, tag, cand_ent_scores in zip(entity_substr_list, entity_tags_list, init_cand_ent_scores_list):
+            for entity_substr, tag, cand_ent_scores in zip(entity_substr_list, substr_tags_list, init_cand_ent_scores_list):
                 cand_ent_scores_init = sorted(cand_ent_scores, key=lambda x: (x[1][0], x[1][1]), reverse=True)
                 cand_ent_scores = cand_ent_scores_init[:self.num_entities_for_conn_ranking]
                 cand_ent_scores_list.append(cand_ent_scores)
@@ -376,14 +376,14 @@ class EntityLinker(Component, Serializable):
             if self.use_connections:
                 tm1 = time.time()
                 entities_with_conn_scores_list, entities_scores_list = \
-                    self.rank_by_connections(entity_substr_list, entity_tags_list, entity_sent_list,
+                    self.rank_by_connections(entity_substr_list, substr_tags_list, entity_sent_list,
                                              cand_ent_scores_list, entities_scores_list)
                 
-                entity_ids_list, pages_list, conf_list = self.postprocess_entities(entity_substr_split_list,
-                    entity_offsets_list, entity_tags_list, entity_sent_list, entities_with_conn_scores_list,
+                entity_ids_list, pages_list, entity_tags_list, conf_list = self.postprocess_entities(entity_substr_split_list,
+                    entity_offsets_list, substr_tags_list, entity_sent_list, entities_with_conn_scores_list,
                     entities_types_dict)
                 
-        return entity_ids_list, entity_tags_list, conf_list, pages_list
+        return entity_ids_list, substr_tags_list, conf_list, entity_tags_list, pages_list
     
     def get_cand_ent_customdb(self, entity_substr_list, entity_substr_split_list, entity_sent_list,
                                     tags_with_probas_list, sentences_list):
@@ -426,7 +426,7 @@ class EntityLinker(Component, Serializable):
                             cand_ent_scores = self.get_cand_ent(entity_substr, entity_substr_split,
                                 tags_for_search, entity_sent, sentences_list, p641_ent, p641_tr)
                         if cand_ent_scores:
-                            cur_ent, (cur_substr_score, cur_num_rels, cur_page, cur_types, cur_p131, cur_p641, cur_triplets_str) = cand_ent_scores[0]
+                            cur_ent, (cur_substr_score, cur_num_rels, cur_page, cur_types, cur_p131, cur_p641, cur_triplets_str, cur_tag) = cand_ent_scores[0]
                             if isinstance(cur_types, str):
                                 cur_types = cur_types.split()
                             if isinstance(cur_p641, str):
@@ -444,7 +444,7 @@ class EntityLinker(Component, Serializable):
         entity_types_sent_most_freq, entity_types_most_freq = self.most_freq_types(entity_substr_split_list,
                     entity_tags_list, entity_sent_list, entities_with_conn_scores_list, entities_types_dict)
         
-        entity_ids_list, pages_list, conf_list = [], [], []
+        entity_ids_list, pages_list, ent_tags_list, conf_list = [], [], [], []
         for entity_substr_split, entity_offsets, tag, entity_sent, entities_with_conn_scores in \
                 zip(entity_substr_split_list, entity_offsets_list, entity_tags_list, entity_sent_list, entities_with_conn_scores_list):
             top_entities_with_scores = []
@@ -455,14 +455,16 @@ class EntityLinker(Component, Serializable):
                     (freq_types_sent_info[1][0] >= 4 or (freq_types_info[1][0] >= 2 and freq_types_info[0] == freq_types_sent_info[0])):
                 most_freq_type = freq_types_info[0]
             
-            for entity, substr_score, num_rels, page, conn_score_notag, conn_score_tag in entities_with_conn_scores:
+            for entity, substr_score, num_rels, page, ent_tag, conn_score_notag, conn_score_tag in entities_with_conn_scores:
                 add_types_score = 0
                 cur_types = entities_types_dict.get(entity, [])
                 for cur_type in cur_types:
                     if most_freq_type and cur_type == most_freq_type:
                         add_types_score += 40
             
-                top_entities_with_scores.append((entity, substr_score, num_rels, conn_score_notag + add_types_score, conn_score_tag, page))
+                if not ent_tag:
+                    ent_tag = tag
+                top_entities_with_scores.append((entity, substr_score, num_rels, conn_score_notag + add_types_score, conn_score_tag, page, ent_tag))
             if len(entity_substr_split) >= 4 or tag in {"TYPE_OF_SPORT", "ORG"}:
                 top_entities_with_scores = sorted(top_entities_with_scores, key=lambda x: (x[1], x[3], x[4], x[2]), reverse=True)
             else:
@@ -491,13 +493,41 @@ class EntityLinker(Component, Serializable):
                             break
             
             entity_ids = [elem[0] for elem in top_entities_with_scores]
-            confs = [elem[1:-1] for elem in top_entities_with_scores]
-            pages = [elem[-1] for elem in top_entities_with_scores]
+            confs = [elem[1:-2] for elem in top_entities_with_scores]
+            final_confs = self.calc_confs(confs)
+            ent_tags = [elem[-1] for elem in top_entities_with_scores]
+            pages = [elem[-2] for elem in top_entities_with_scores]
+            
             entity_ids_list.append(copy.deepcopy(entity_ids[:self.num_entities_to_return]))
             pages_list.append(copy.deepcopy(pages[:self.num_entities_to_return]))
-            conf_list.append(copy.deepcopy(confs[:self.num_entities_to_return]))
-        return entity_ids_list, pages_list, conf_list
+            ent_tags_list.append(copy.deepcopy(ent_tags[:self.num_entities_to_return]))
+            conf_list.append(copy.deepcopy(final_confs[:self.num_entities_to_return]))
+        return entity_ids_list, pages_list, ent_tags_list, conf_list
     
+    def calc_confs(self, conf_list):
+        final_conf_list = []
+        if conf_list:
+            if (conf_list[0][0] == 1.0 and conf_list[0][1] > 29) or conf_list[0][2] > 200:
+                first_conf = 1.0
+            else:
+                first_conf = 0.5 * min(conf_list[0][1] / 50, 1.0) + 0.5 * min(conf_list[0][1] / 200, 1.0)
+            final_conf_list.append(round(first_conf, 2))
+
+            max_num_rels = max([conf_elem[1] for conf_elem in conf_list])
+            max_edge_conf = max([conf_elem[2] for conf_elem in conf_list])
+            for conf_elem in conf_list[1:]:
+                if (conf_elem[0] == 1.0 and conf_elem[1] > 29) or conf_elem[2] > 200:
+                    cur_conf = 0.99
+                else:
+                    cur_conf = 0.49 * min(conf_elem[1] / max_num_rels, 1.0) + 0.49 * min(conf_elem[1] / max_edge_conf, 1.0)
+                final_conf_list.append(round(cur_conf, 2))
+            if len(final_conf_list) > 2:
+                for _ in range(20):
+                    for i in range(len(final_conf_list) - 2):
+                        if final_conf_list[i + 1] < final_conf_list[i + 2]:
+                            final_conf_list[i + 1] = round(min(final_conf_list[i + 2] + 0.01, 0.99), 2)
+        return final_conf_list
+
     def most_freq_types(self, entity_substr_split_list, entity_tags_list, entity_sent_list,
                               entities_with_conn_scores_list, entities_types_dict):
         entity_types_sent_freq, entity_types_freq = defaultdict(dict), defaultdict(dict)
@@ -728,7 +758,7 @@ class EntityLinker(Component, Serializable):
     def process_cand_ent(self, cand_ent_init, entities_and_ids, entity_substr_split, tags):
         for cand_entity_title, cand_entity_id, cand_entity_rels, tag, page, types, locations, types_of_sport, triplets_str in entities_and_ids:
             substr_score = self.calc_substr_score(cand_entity_id, cand_entity_title, entity_substr_split, tags)
-            cand_ent_init[cand_entity_id].add((substr_score, cand_entity_rels, page, types, locations, types_of_sport, triplets_str))
+            cand_ent_init[cand_entity_id].add((substr_score, cand_entity_rels, page, types, locations, types_of_sport, triplets_str, tag))
         return cand_ent_init
     
     def find_exact_match_sqlite(self, entity_substr, tags, rels_dict=None):
@@ -920,7 +950,7 @@ class EntityLinker(Component, Serializable):
                 else:
                     for entity, scores in entities_scores:
                         entities_for_ranking.append(entity)
-                for entity, (substr_score, num_rels, page, types, locations, types_of_sport, triplets_info) in entities_scores:
+                for entity, (substr_score, num_rels, page, types, locations, types_of_sport, triplets_info, ent_tag) in entities_scores:
                     objects, triplets = set(), set()
                     if isinstance(triplets_info, str):
                         rel_objects = triplets_info.split("---")
@@ -985,7 +1015,7 @@ class EntityLinker(Component, Serializable):
             entities_found_inters_list.append(cur_entity_dict)
             found_conn = defaultdict(set)
             entities_found_conn_list.append(found_conn)
-        
+
         for i in range(len(entities_for_ranking_list)):
             for entity1 in entities_for_ranking_list[i]:
                 for j in range(len(entities_for_ranking_list)):
@@ -1180,9 +1210,10 @@ class EntityLinker(Component, Serializable):
         for i in range(len(entities_conn_scores_list)):
             entities_with_conn_scores = []
             for entity in entities_conn_scores_list[i]:
-                cur_scores = [entity] + list(entities_scores_list[i].get(entity, [0.0, 0, ""]))[:3] + list(entities_conn_scores_list[i][entity])
+                cur_scores = [entity] + list(entities_scores_list[i].get(entity, [0.0, 0, ""]))[:3] + \
+                    [entities_scores_list[i].get(entity, [""])[-1]] + list(entities_conn_scores_list[i][entity])
                 entities_with_conn_scores.append(cur_scores)
-            entities_with_conn_scores = sorted(entities_with_conn_scores, key=lambda x: (x[4], x[5], x[1], x[2]), reverse=True)
+            entities_with_conn_scores = sorted(entities_with_conn_scores, key=lambda x: (x[5], x[6], x[1], x[2]), reverse=True)
             entities_with_conn_scores_list.append(entities_with_conn_scores)
             for entity in entities_conn_scores_list[i]:
                 confs = list(entities_scores_list[i].get(entity, [0.0, 0, ""]))[:3]
