@@ -16,7 +16,7 @@ from constants import (
 
 
 logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.DEBUG
 )
 logger = logging.getLogger(__name__)
 
@@ -248,7 +248,9 @@ async def extract(payload: EntityExtractionAgentRequest):
     request_data = EntityExtractionServiceRequest(texts=[payload.text]).dict()
     response = requests.post(server_settings.entity_extraction_url, json=request_data)
     entities = response.json()
-    logger.error(entities)
+
+    logger.debug(entities)
+
     entities = EntityExtractionServiceResponse(**entities)
     entities = unpack_entity_extraction_service_response(entities)
 
