@@ -1241,6 +1241,8 @@ class EntityLinker(Component, Serializable):
                             ent_tag = self.occ_labels_dict.get(occ, "")
                 if not ent_tag:
                     ent_tag = entities_scores_list[i].get(entity, [""])[-1]
+                if entity_type in {"Q3467906", "Q9135", "Q218616"}:
+                    ent_tag = "product"
                 
                 cur_scores = [entity] + list(entities_scores_list[i].get(entity, [0.0, 0, ""]))[:3] + \
                     [ent_tag] + list(entities_conn_scores_list[i][entity])
