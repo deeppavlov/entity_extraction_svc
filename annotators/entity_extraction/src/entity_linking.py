@@ -71,6 +71,7 @@ class EntityLinker(Component, Serializable):
                  types_dict_filename: str = None,
                  q_to_page_filename: str = None,
                  wikidata_filename: str = None,
+                 occ_labels_filename: str = None,
                  return_additional_info: bool = False,
                  **kwargs) -> None:
         """
@@ -125,6 +126,7 @@ class EntityLinker(Component, Serializable):
         self.types_dict_filename = types_dict_filename
         self.q_to_page_filename = q_to_page_filename
         self.wikidata_filename = wikidata_filename
+        self.occ_labels_filename = occ_labels_filename
         self.return_additional_info = return_additional_info
         self.load()
         self.sum_tm = 0.0
@@ -134,6 +136,7 @@ class EntityLinker(Component, Serializable):
         if self.db_format == "sqlite":
             self.conn = sqlite3.connect(str(self.load_path / self.entities_database_filename), check_same_thread=False)
             self.cur = self.conn.cursor()
+            self.occ_labels_dict = load_pickle(self.load_path / self.occ_labels_filename)
         else:
             self.name_to_q = load_pickle(self.load_path / self.name_to_q_filename)
             log.info("opened name_to_q")
@@ -494,8 +497,8 @@ class EntityLinker(Component, Serializable):
             
             entity_ids = [elem[0] for elem in top_entities_with_scores]
             confs = [elem[1:-2] for elem in top_entities_with_scores]
-            final_confs = self.calc_confs(confs)
-            ent_tags = [elem[-1] for elem in top_entities_with_scores]
+            final_confs = self.calc_confs(confs, len(entity_substr_split_list))
+            ent_tags = [elem[-1].lower() for elem in top_entities_with_scores]
             pages = [elem[-2] for elem in top_entities_with_scores]
             
             entity_ids_list.append(copy.deepcopy(entity_ids[:self.num_entities_to_return]))
@@ -504,10 +507,10 @@ class EntityLinker(Component, Serializable):
             conf_list.append(copy.deepcopy(final_confs[:self.num_entities_to_return]))
         return entity_ids_list, pages_list, ent_tags_list, conf_list
     
-    def calc_confs(self, conf_list):
+    def calc_confs(self, conf_list, num_ent):
         final_conf_list = []
         if conf_list:
-            if (conf_list[0][0] == 1.0 and conf_list[0][1] > 29) or conf_list[0][2] > 200:
+            if (conf_list[0][0] == 1.0 and (conf_list[0][1] > 29 or conf_list[0][2] > 10 or num_ent == 1)) or conf_list[0][2] > 200:
                 first_conf = 1.0
             else:
                 first_conf = 0.0
@@ -1218,8 +1221,21 @@ class EntityLinker(Component, Serializable):
         for i in range(len(entities_conn_scores_list)):
             entities_with_conn_scores = []
             for entity in entities_conn_scores_list[i]:
+                entity_type = entities_scores_list[i].get(entity, [0.0, 0, "", "", "", "", ""])[3]
+                entity_triplets = entities_scores_list[i].get(entity, [0.0, 0, "", "", "", "", ""])[6]
+                ent_tag = ""
+                if entity_type == "Q5" and entity_triplets:
+                    entity_triplets_list = entity_triplets.split("---")
+                    entity_triplets_list = [tr.split() for tr in entity_triplets_list]
+                    for rel, *objects in entity_triplets_list:
+                        if rel == "P106" and objects:
+                            occ = objects[0]
+                            ent_tag = self.occ_labels_dict.get(occ, "")
+                if not ent_tag:
+                    ent_tag = entities_scores_list[i].get(entity, [""])[-1]
+                
                 cur_scores = [entity] + list(entities_scores_list[i].get(entity, [0.0, 0, ""]))[:3] + \
-                    [entities_scores_list[i].get(entity, [""])[-1]] + list(entities_conn_scores_list[i][entity])
+                    [ent_tag] + list(entities_conn_scores_list[i][entity])
                 entities_with_conn_scores.append(cur_scores)
             entities_with_conn_scores = sorted(entities_with_conn_scores, key=lambda x: (x[5], x[6], x[1], x[2]), reverse=True)
             entities_with_conn_scores_list.append(entities_with_conn_scores)
