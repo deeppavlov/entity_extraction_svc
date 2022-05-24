@@ -40,6 +40,15 @@ except Exception as e:
     raise e
 
 
+def add_stop_signs(texts):
+    new_texts = []
+    for text in texts:
+        if text and isinstance(text, str) and text[-1] not in {".", ",", "?", "!"}:
+            text = f"{text}."
+        new_texts.append(text)
+    return new_texts
+
+
 class Payload(BaseModel):
     texts: List[str]
 
@@ -56,6 +65,7 @@ class TripletsList(BaseModel):
 async def entity_extraction(payload: Payload):
     st_time = time.time()
     texts = payload.texts
+    texts = add_stop_signs(texts)
     entity_info = {}
     try:
         entity_substr, entity_offsets, entity_positions, tags, sentences_offsets, sentences, probas = ner(texts)
@@ -81,6 +91,7 @@ async def entity_extraction(payload: Payload):
 async def entity_detection(payload: Payload):
     st_time = time.time()
     texts = payload.texts
+    texts = add_stop_signs(texts)
     entity_info = {}
     try:
         entity_substr, entity_offsets, entity_positions, tags, sentences_offsets, sentences, probas = ner(texts)
