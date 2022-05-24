@@ -501,10 +501,18 @@ class EntityLinker(Component, Serializable):
             ent_tags = [elem[-1].lower() for elem in top_entities_with_scores]
             pages = [elem[-2] for elem in top_entities_with_scores]
             
-            entity_ids_list.append(copy.deepcopy(entity_ids[:self.num_entities_to_return]))
-            pages_list.append(copy.deepcopy(pages[:self.num_entities_to_return]))
+            low_conf = False
+            if final_confs and final_confs[0] < 0.3 and confs[0][0] < 0.51:
+                low_conf = True
+            if not low_conf:
+                entity_ids_list.append(copy.deepcopy(entity_ids[:self.num_entities_to_return]))
+                pages_list.append(copy.deepcopy(pages[:self.num_entities_to_return]))
+                conf_list.append(copy.deepcopy(final_confs[:self.num_entities_to_return]))
+            else:
+                entity_ids_list.append([])
+                pages_list.append([])
+                conf_list.append([])
             ent_tags_list.append(copy.deepcopy(ent_tags[:self.num_entities_to_return]))
-            conf_list.append(copy.deepcopy(final_confs[:self.num_entities_to_return]))
         return entity_ids_list, pages_list, ent_tags_list, conf_list
     
     def calc_confs(self, conf_list, num_ent):

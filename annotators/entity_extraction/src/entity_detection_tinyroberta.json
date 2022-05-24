@@ -90,7 +90,7 @@
         "tags_file": "{MODEL_PATH}/tag_ent.dict",
         "top_n": 3,
         "include_misc": false,
-        "ent_thres": 0.35,
+        "ent_thres": 0.28,
         "in": ["x_tokens", "y_ent_pred_ind", "y_seq_pred"],
         "out": ["y_pred", "entities", "positions", "tags", "probas"]
       }
