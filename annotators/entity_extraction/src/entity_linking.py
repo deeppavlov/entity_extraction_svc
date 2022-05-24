@@ -510,7 +510,11 @@ class EntityLinker(Component, Serializable):
             if (conf_list[0][0] == 1.0 and conf_list[0][1] > 29) or conf_list[0][2] > 200:
                 first_conf = 1.0
             else:
-                first_conf = 0.5 * min(conf_list[0][1] / 50, 1.0) + 0.5 * min(conf_list[0][1] / 200, 1.0)
+                first_conf = 0.0
+                if conf_list[0][1] > 0.0:
+                    first_conf += 0.5 * min(conf_list[0][1] / 50, 1.0)
+                if conf_list[0][2] > 0.0:
+                    first_conf += 0.5 * min(conf_list[0][2] / 200, 1.0)
             final_conf_list.append(round(first_conf, 2))
 
             max_num_rels = max([conf_elem[1] for conf_elem in conf_list])
@@ -519,7 +523,11 @@ class EntityLinker(Component, Serializable):
                 if (conf_elem[0] == 1.0 and conf_elem[1] > 29) or conf_elem[2] > 200:
                     cur_conf = 0.99
                 else:
-                    cur_conf = 0.49 * min(conf_elem[1] / max_num_rels, 1.0) + 0.49 * min(conf_elem[1] / max_edge_conf, 1.0)
+                    cur_conf = 0.0
+                    if max_num_rels > 0:
+                        cur_conf = 0.49 * min(conf_elem[1] / max_num_rels, 1.0)
+                    if max_edge_conf > 0.0:
+                        cur_conf += 0.49 * min(conf_elem[1] / max_edge_conf, 1.0)
                 final_conf_list.append(round(cur_conf, 2))
             if len(final_conf_list) > 2:
                 for _ in range(20):
