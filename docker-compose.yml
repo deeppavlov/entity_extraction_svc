@@ -1,6 +1,9 @@
 services:
   agent:
     env_file: [.env]
+    environment:
+      WAIT_HOSTS: "entity-extraction:9103, wiki-parser:9077"
+      WAIT_HOSTS_TIMEOUT: ${WAIT_TIMEOUT:-480}
     build:
       args:
         PORT: 9999

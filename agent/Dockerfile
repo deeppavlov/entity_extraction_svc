@@ -11,4 +11,4 @@ RUN pip install -r /src/requirements.txt
 COPY $SRC_DIR /src
 WORKDIR /src
 
-CMD uvicorn server:app --host 0.0.0.0 --port $PORT --reload
+CMD sh -c 'bin/wait && uvicorn server:app --host 0.0.0.0 --port $PORT --reload'

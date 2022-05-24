@@ -134,7 +134,7 @@ class EntityExtractionServiceResponse(BaseModel):
         return image_uri
 
     def images(self, idx, variety_idx):
-        images_dict = {}
+        images_dict = {"full": "", "thumbnail": ""}
         image_uri = self.image_uri(idx, variety_idx)
         if image_uri:
             images_dict = {"full": image_uri, "thumbnail": f"{image_uri}?width=300"}
