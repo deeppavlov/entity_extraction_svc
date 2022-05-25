@@ -508,11 +508,15 @@ class EntityLinker(Component, Serializable):
                 entity_ids_list.append(copy.deepcopy(entity_ids[:self.num_entities_to_return]))
                 pages_list.append(copy.deepcopy(pages[:self.num_entities_to_return]))
                 conf_list.append(copy.deepcopy(final_confs[:self.num_entities_to_return]))
+                ent_tags_list.append(copy.deepcopy(ent_tags[:self.num_entities_to_return]))
             else:
-                entity_ids_list.append([])
-                pages_list.append([])
-                conf_list.append([])
-            ent_tags_list.append(copy.deepcopy(ent_tags[:self.num_entities_to_return]))
+                entity_ids_list.append(["not in wiki"])
+                pages_list.append(["not in wiki"])
+                conf_list.append([0.0])
+                if ent_tags:
+                    ent_tags_list.append(ent_tags[0])
+                else:
+                    ent_tags_list.append(["not_in_wiki"])
         return entity_ids_list, pages_list, ent_tags_list, conf_list
     
     def calc_confs(self, conf_list, num_ent):
@@ -613,6 +617,12 @@ class EntityLinker(Component, Serializable):
             if tag in self.related_tags:
                 add_tags += self.related_tags[tag]
         tags_for_search += add_tags
+        
+        if len(entity_substr_list) == 1 and not tags_for_search:
+            for tag_proba, tag in tags_with_probas[:2]:
+                tags_for_search.append(tag)
+            tags_for_search.append("MISC")
+        
         if tags_with_probas and tags_with_probas[0][0] < 0.9 and tags_with_probas[0][1] in {"OCCUPATION", "CHEMICAL_ELEMENT"}:
             tags_for_search.append("MISC")
         return tags_for_search
