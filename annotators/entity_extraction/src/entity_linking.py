@@ -514,7 +514,7 @@ class EntityLinker(Component, Serializable):
                 pages_list.append(["not in wiki"])
                 conf_list.append([0.0])
                 if ent_tags:
-                    ent_tags_list.append(ent_tags[0])
+                    ent_tags_list.append([ent_tags[0]])
                 else:
                     ent_tags_list.append(["not_in_wiki"])
         return entity_ids_list, pages_list, ent_tags_list, conf_list
