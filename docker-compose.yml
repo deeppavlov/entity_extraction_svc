@@ -34,7 +34,7 @@ services:
       - 9103:9103
     volumes:
       - ./annotators/entity_extraction:/src
-      - /archive/evseev/.deeppavlov:/root/.deeppavlov
+      - ~/.deeppavlov:/root/.deeppavlov
     environment:
       - CUDA_VISIBLE_DEVICES=''
     deploy:
