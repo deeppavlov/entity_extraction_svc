@@ -510,13 +510,13 @@ class EntityLinker(Component, Serializable):
                 conf_list.append(copy.deepcopy(final_confs[:self.num_entities_to_return]))
                 ent_tags_list.append(copy.deepcopy(ent_tags[:self.num_entities_to_return]))
             else:
-                entity_ids_list.append(["not in wiki"])
-                pages_list.append(["not in wiki"])
+                entity_ids_list.append([""])
+                pages_list.append([""])
                 conf_list.append([0.0])
                 if ent_tags:
                     ent_tags_list.append([ent_tags[0]])
                 else:
-                    ent_tags_list.append(["not_in_wiki"])
+                    ent_tags_list.append([""])
         return entity_ids_list, pages_list, ent_tags_list, conf_list
     
     def calc_confs(self, conf_list, num_ent):
