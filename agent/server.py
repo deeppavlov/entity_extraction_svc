@@ -105,7 +105,9 @@ class EntityExtractionServiceResponse(BaseModel):
                     adv_types = ADV_TAG_TO_TYPE_MAP[t]
                     for adv_type in adv_types:
                         # types_list.append(f"{ONTOLOGY_URI_PREFIX}/{TAG_TO_TYPE_MAP[t]}")
-                        types_list.append(f"{ONTOLOGY_URI_PREFIX}/{adv_type}")
+                        dbpedia_type = f"{ONTOLOGY_URI_PREFIX}/{adv_type}"
+                        if dbpedia_type not in types_list:
+                            types_list.append(dbpedia_type)
             except KeyError:
                 pass
 
