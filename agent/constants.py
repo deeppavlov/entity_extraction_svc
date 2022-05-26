@@ -4,6 +4,6 @@ ONTOLOGY_URI_PREFIX = "https://dbpedia.org/ontology"
 TAG_TO_TYPE_MAP = {
     "per": "Agent",
     "loc": "Place",
-    "org": "Organization",
-    "business": "Organization",
+    "org": "Organisation",
+    "business": "Organisation",
 }
