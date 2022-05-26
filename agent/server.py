@@ -103,12 +103,10 @@ class EntityExtractionServiceResponse(BaseModel):
             # we use only the primary tag cause it corresponds to the best match
             primary_tag = tags[0]
 
-            # for t in tags:
             try:
                 if primary_tag in ADV_TAG_TO_TYPE_MAP:
-                    adv_types = ADV_TAG_TO_TYPE_MAP[t]
+                    adv_types = ADV_TAG_TO_TYPE_MAP[primary_tag]
                     for adv_type in adv_types:
-                        # types_list.append(f"{ONTOLOGY_URI_PREFIX}/{TAG_TO_TYPE_MAP[t]}")
                         dbpedia_type = f"{ONTOLOGY_URI_PREFIX}/{adv_type}"
                         if dbpedia_type not in types_list:
                             types_list.append(dbpedia_type)
