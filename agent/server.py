@@ -98,10 +98,14 @@ class EntityExtractionServiceResponse(BaseModel):
     def types(self, idx):
         types_list = []
         tags = self.tags(idx)
+        
+        if len(tags)>0:
+            # we use only the primary tag cause it corresponds to the best match
+            primary_tag = tags[0]
 
-        for t in tags:
+            # for t in tags:
             try:
-                if t in ADV_TAG_TO_TYPE_MAP:
+                if primary_tag in ADV_TAG_TO_TYPE_MAP:
                     adv_types = ADV_TAG_TO_TYPE_MAP[t]
                     for adv_type in adv_types:
                         # types_list.append(f"{ONTOLOGY_URI_PREFIX}/{TAG_TO_TYPE_MAP[t]}")
