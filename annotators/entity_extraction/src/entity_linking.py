@@ -502,7 +502,7 @@ class EntityLinker(Component, Serializable):
                 if len(top_entities_with_scores) > 2:
                     else_ent = top_entities_with_scores[2:]
                 if second_ent[1] >= first_ent[1] and second_ent[2] > first_ent[2] \
-                        and first_ent[3] / max(second_ent[3], 0.5) < 2.5 and first_ent[4] == 0 and second_ent[4] > 50:
+                        and first_ent[3] / max(second_ent[3], 0.5) < 2.5 and first_ent[4] < 5 and second_ent[4] > 50:
                     top_entities_with_scores = [second_ent, first_ent] + else_ent
             
             entity_ids = [elem[0] for elem in top_entities_with_scores]
