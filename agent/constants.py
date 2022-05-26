@@ -5,8 +5,23 @@ TAG_TO_TYPE_MAP = {
     "per": "Person",
     "loc": "Place",
     "org": "Organisation",
-    "business": "Company",
-    "org": "Agent",
-    "business": "Agent",
-    "per": "Agent"
+    "business": "Company"
+}
+ADV_TAG_TO_TYPE_MAP = {
+    "per": [
+        "Agent",
+        "Person"
+    ],
+    "loc": [
+        "Place"
+    ],
+    "org": [
+        "Agent",
+        "Organisation"
+    ],
+    "business": [
+        "Agent",
+        "Organisation",
+        "Company"
+    ]
 }
