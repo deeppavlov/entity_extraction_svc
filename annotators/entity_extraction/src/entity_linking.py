@@ -804,6 +804,8 @@ class EntityLinker(Component, Serializable):
         if self.delete_hyphens:
             if entity_substr.endswith("'s"):
                 entity_substr = entity_substr.replace("'s", "")
+            if entity_substr.endswith(" '"):
+                entity_substr = entity_substr.replace(" '", "")
             entity_substr = entity_substr.replace("-", " ").replace("'", " ")
         entity_substr_split = entity_substr.split()
         entities_and_ids = []
