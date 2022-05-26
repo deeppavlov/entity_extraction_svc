@@ -7,7 +7,7 @@ TAG_TO_TYPE_MAP = {
     "org": "Organisation",
     "business": "Company"
 }
-ADV_TAG_TO_TYPE_MAP = {
+TAG_TO_TYPE_LIST_MAP = {
     "per": [
         "Agent",
         "Person"

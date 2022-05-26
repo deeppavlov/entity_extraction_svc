@@ -1,3 +1,7 @@
+import os
+print(os.environ["PYTHONPATH"])
+
+
 import logging
 from datetime import datetime
 from typing import List, Union, Optional
@@ -7,9 +11,10 @@ from fastapi import FastAPI
 from pydantic import BaseModel, BaseSettings
 from starlette.middleware.cors import CORSMiddleware
 
-from constants import (
+from agent.config import ServerSettings
+from agent.constants import (
     TAG_TO_TYPE_MAP,
-    ADV_TAG_TO_TYPE_MAP,
+    TAG_TO_TYPE_LIST_MAP,
     WIKIPEDIA_PAGE_URI_PREFIX,
     ONTOLOGY_URI_PREFIX,
     WIKIPEDIA_FILE_URI_PREFIX,
@@ -30,18 +35,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-class ServerSettings(BaseSettings):
-    entity_extraction_url: str
-    entity_detection_url: str
-    entity_linking_url: str
-    wiki_parser_url: str
-
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        env_nested_delimiter = "__"
 
 
 class EntityExtractionAgentRequest(BaseModel):
@@ -98,18 +91,17 @@ class EntityExtractionServiceResponse(BaseModel):
     def types(self, idx):
         types_list = []
         tags = self.tags(idx)
-        
-        if len(tags)>0:
-            # we use only the primary tag cause it corresponds to the best match
+
+        if len(tags) > 0:
+            # we use only the primary tag because it corresponds to the best match
             primary_tag = tags[0]
 
             try:
-                if primary_tag in ADV_TAG_TO_TYPE_MAP:
-                    adv_types = ADV_TAG_TO_TYPE_MAP[primary_tag]
-                    for adv_type in adv_types:
-                        dbpedia_type = f"{ONTOLOGY_URI_PREFIX}/{adv_type}"
-                        if dbpedia_type not in types_list:
-                            types_list.append(dbpedia_type)
+                adv_types = TAG_TO_TYPE_LIST_MAP[primary_tag]
+                for adv_type in adv_types:
+                    dbpedia_type = f"{ONTOLOGY_URI_PREFIX}/{adv_type}"
+                    if dbpedia_type not in types_list:
+                        types_list.append(dbpedia_type)
             except KeyError:
                 pass
 

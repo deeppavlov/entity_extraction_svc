@@ -1,0 +1,1027 @@
+{
+	"annotations": [
+		{
+			"start": 47,
+			"end": 53,
+			"spot": "Boeing",
+			"tags": [
+				"business",
+				"business",
+				"business",
+				"business",
+				"business"
+			],
+			"types": [
+				"https://dbpedia.org/ontology/Agent",
+				"https://dbpedia.org/ontology/Organisation",
+				"https://dbpedia.org/ontology/Company"
+			],
+			"confidence": 1.0,
+			"id": "Q66",
+			"title": "Boeing",
+			"uri": "https://en.wikipedia.org/wiki/Boeing",
+			"abstract": "The Boeing Company is an American multinational corporation that designs, manufactures, and sells airplanes, rotorcraft, rockets, satellites, telecommunications equipment, and missiles worldwide. The company also provides leasing and product support services. Boeing is among the largest global aerospace manufacturers; it is the third-largest defense contractor in the world based on 2020 revenue, and is the largest exporter in the United States by dollar value. Boeing stock is included in the Dow Jones Industrial Average. Boeing is incorporated in Delaware.",
+			"label": "Boeing",
+			"categories": [
+				"Boeing",
+				"1916 establishments in Washington (state)",
+				"American companies established in 1916",
+				"Collier Trophy recipients",
+				"Companies in the Dow Jones Industrial Average",
+				"Companies listed on the New York Stock Exchange",
+				"Defense companies of the United States",
+				"History of Seattle",
+				"Manufacturing companies established in 1916",
+				"Multinational companies headquartered in the United States"
+			],
+			"image": {
+				"full": "https://commons.wikimedia.org/wiki/Special:FilePath/2004-09-14_1680x3000_chicago_boeing_building.jpg",
+				"thumbnail": "https://commons.wikimedia.org/wiki/Special:FilePath/2004-09-14_1680x3000_chicago_boeing_building.jpg?width=300"
+			},
+			"lod": {
+				"wikipedia": "https://en.wikipedia.org/wiki/Boeing"
+			},
+			"extras": [
+				{
+					"start": 47,
+					"end": 53,
+					"spot": "Boeing",
+					"tags": [
+						"business",
+						"business",
+						"business",
+						"business",
+						"business"
+					],
+					"types": [
+						"https://dbpedia.org/ontology/Agent",
+						"https://dbpedia.org/ontology/Organisation",
+						"https://dbpedia.org/ontology/Company"
+					],
+					"confidence": 0.98,
+					"id": "Q4937112",
+					"title": "Boeing Australia",
+					"uri": "https://en.wikipedia.org/wiki/Boeing_Australia",
+					"abstract": "Boeing Australia Holdings Pty Ltd, or simply Boeing Australia, is Boeings largest subdivision outside the United States. Established in 2002, the company oversees its seven wholly owned subsidiaries, consolidating and co-ordinating Boeing’s businesses and operations in Australia.",
+					"label": "Boeing Australia",
+					"categories": [
+						"Boeing|*Australia",
+						"Australian subsidiaries of foreign companies",
+						"Aerospace companies of Australia",
+						"Australian companies established in 2002",
+						"Companies based in Brisbane"
+					],
+					"image": {},
+					"lod": {
+						"wikipedia": "https://en.wikipedia.org/wiki/Boeing_Australia"
+					}
+				},
+				{
+					"start": 47,
+					"end": 53,
+					"spot": "Boeing",
+					"tags": [
+						"business",
+						"business",
+						"business",
+						"business",
+						"business"
+					],
+					"types": [
+						"https://dbpedia.org/ontology/Agent",
+						"https://dbpedia.org/ontology/Organisation",
+						"https://dbpedia.org/ontology/Company"
+					],
+					"confidence": 0.97,
+					"id": "Q4937155",
+					"title": "Boeing Store",
+					"uri": "https://en.wikipedia.org/wiki/Boeing_Store",
+					"abstract": "The Boeing Store is a chain of stores that sells official Boeing merchandise. It is based in Seattle, Washington and is owned and operated by the Boeing Company. There are 14 stores across the United States and an international online store. ",
+					"label": "Boeing Store",
+					"categories": [
+						"Boeing|Store",
+						"Retail companies of the United States",
+						"Retail companies established in 2001"
+					],
+					"image": {},
+					"lod": {
+						"wikipedia": "https://en.wikipedia.org/wiki/Boeing_Store"
+					}
+				},
+				{
+					"start": 47,
+					"end": 53,
+					"spot": "Boeing",
+					"tags": [
+						"business",
+						"business",
+						"business",
+						"business",
+						"business"
+					],
+					"types": [
+						"https://dbpedia.org/ontology/Agent",
+						"https://dbpedia.org/ontology/Organisation",
+						"https://dbpedia.org/ontology/Company"
+					],
+					"confidence": 0.96,
+					"id": "Q8793",
+					"title": "Boeing Commercial Airplanes",
+					"uri": "https://en.wikipedia.org/wiki/Boeing_Commercial_Airplanes",
+					"abstract": "Boeing Commercial Airplanes (BCA) is a division of The Boeing Company. It designs, assembles, markets, and sells jet airliners and business jets (Boeing Business Jets), and also provides product-related maintenance and training to customers worldwide. BCA operates out of its division headquarters in Renton, Washington, and has more than a dozen engineering, manufacturing, and assembly facilities located throughout the United States and internationally. It includes the assets of the Douglas Aircraft division of the former McDonnell Douglas Corporation, which merged with Boeing in 1997. As of the end of 2021, BCA employed about 142,000 people.",
+					"label": "Boeing Commercial Airplanes",
+					"categories": [
+						"Boeing",
+						"Aerospace companies of the United States",
+						"Companies based in Renton, Washington",
+						"Manufacturing companies based in Washington (state)",
+						"Collier Trophy recipients"
+					],
+					"image": {
+						"full": "https://commons.wikimedia.org/wiki/Special:FilePath/At_Boeing's_Everett_factory_near_Seattle_(9130160595).jpg",
+						"thumbnail": "https://commons.wikimedia.org/wiki/Special:FilePath/At_Boeing's_Everett_factory_near_Seattle_(9130160595).jpg?width=300"
+					},
+					"lod": {
+						"wikipedia": "https://en.wikipedia.org/wiki/Boeing_Commercial_Airplanes"
+					}
+				},
+				{
+					"start": 47,
+					"end": 53,
+					"spot": "Boeing",
+					"tags": [
+						"business",
+						"business",
+						"business",
+						"business",
+						"business"
+					],
+					"types": [
+						"https://dbpedia.org/ontology/Agent",
+						"https://dbpedia.org/ontology/Organisation",
+						"https://dbpedia.org/ontology/Company"
+					],
+					"confidence": 0.95,
+					"id": "Q795324",
+					"title": "Boeing Defense, Space & Security",
+					"uri": "https://en.wikipedia.org/wiki/Boeing_Defense,_Space_&_Security",
+					"abstract": "Boeing Defense, Space & Security (BDS) is a division (business unit) of The Boeing Company based in Arlington, Virginia. It is responsible for defense and aerospace products and services. It was formerly known as Boeing Integrated Defense Systems (IDS).",
+					"label": "Boeing Defense, Space & Security",
+					"categories": [
+						"Boeing",
+						"Defense companies of the United States",
+						"Aircraft manufacturers of the United States",
+						"Companies based in St. Louis County, Missouri",
+						"Berkeley, Missouri",
+						"Companies based in Arlington County, Virginia",
+						"Military vehicle manufacturers"
+					],
+					"image": {
+						"full": "https://commons.wikimedia.org/wiki/Special:FilePath/Boeing_X-45A_UCAV.jpg",
+						"thumbnail": "https://commons.wikimedia.org/wiki/Special:FilePath/Boeing_X-45A_UCAV.jpg?width=300"
+					},
+					"lod": {
+						"wikipedia": "https://en.wikipedia.org/wiki/Boeing_Defense,_Space_&_Security"
+					}
+				}
+			]
+		},
+		{
+			"start": 98,
+			"end": 102,
+			"spot": "NASA",
+			"tags": [
+				"business",
+				"org",
+				"org",
+				"org",
+				"business"
+			],
+			"types": [
+				"https://dbpedia.org/ontology/Agent",
+				"https://dbpedia.org/ontology/Organisation",
+				"https://dbpedia.org/ontology/Company"
+			],
+			"confidence": 1.0,
+			"id": "Q23548",
+			"title": "NASA",
+			"uri": "https://en.wikipedia.org/wiki/NASA",
+			"abstract": "The National Aeronautics and Space Administration (NASA ) is an independent agency of the U.S. federal government responsible for the civilian space program, as well as aeronautics and space research.",
+			"label": "NASA",
+			"categories": [
+				"NASA",
+				"1958 establishments in Washington, D.C.",
+				"Articles containing video clips",
+				"Collier Trophy recipients",
+				"Government agencies established in 1958",
+				"Independent agencies of the United States government",
+				"Organizations based in Washington, D.C.",
+				"Webby Award winners"
+			],
+			"image": {
+				"full": "https://commons.wikimedia.org/wiki/Special:FilePath/NASA_HQ_Building.jpg",
+				"thumbnail": "https://commons.wikimedia.org/wiki/Special:FilePath/NASA_HQ_Building.jpg?width=300"
+			},
+			"lod": {
+				"wikipedia": "https://en.wikipedia.org/wiki/NASA"
+			},
+			"extras": [
+				{
+					"start": 98,
+					"end": 102,
+					"spot": "NASA",
+					"tags": [
+						"business",
+						"org",
+						"org",
+						"org",
+						"business"
+					],
+					"types": [
+						"https://dbpedia.org/ontology/Agent",
+						"https://dbpedia.org/ontology/Organisation",
+						"https://dbpedia.org/ontology/Company"
+					],
+					"confidence": 0.82,
+					"id": "Q48821",
+					"title": "Kennedy Space Center",
+					"uri": "https://en.wikipedia.org/wiki/Kennedy_Space_Center",
+					"abstract": "The John F. Kennedy Space Center (KSC, originally known as the NASA Launch Operations Center), located on Merritt Island, Florida, is one of the National Aeronautics and Space Administrations (NASA) ten field centers. Since December 1968, KSC has been NASAs primary launch center of human spaceflight. Launch operations for the Apollo, Skylab and Space Shuttle programs were carried out from Kennedy Space Center Launch Complex 39 and managed by KSC. Located on the east coast of Florida, KSC is adjacent to Cape Canaveral Space Force Station (CCSFS). The management of the two entities work very closely together, share resources and operate facilities on each others property.",
+					"label": "Kennedy Space Center",
+					"categories": [
+						"Kennedy Space Center",
+						"NASA facilities",
+						"Aerospace museums in Florida",
+						"Buildings and structures in Merritt Island, Florida",
+						"Monuments and memorials to John F. Kennedy in the United States|Space Center",
+						"Government buildings in Florida",
+						"IMAX venues",
+						"Industrial buildings and structures in Florida",
+						"Museums in Brevard County, Florida",
+						"Government buildings on the National Register of Historic Places in Florida"
+					],
+					"image": {
+						"full": "https://commons.wikimedia.org/wiki/Special:FilePath/Aerial_View_of_Launch_Complex_39.jpg",
+						"thumbnail": "https://commons.wikimedia.org/wiki/Special:FilePath/Aerial_View_of_Launch_Complex_39.jpg?width=300"
+					},
+					"lod": {
+						"wikipedia": "https://en.wikipedia.org/wiki/Kennedy_Space_Center"
+					}
+				},
+				{
+					"start": 98,
+					"end": 102,
+					"spot": "NASA",
+					"tags": [
+						"business",
+						"org",
+						"org",
+						"org",
+						"business"
+					],
+					"types": [
+						"https://dbpedia.org/ontology/Agent",
+						"https://dbpedia.org/ontology/Organisation",
+						"https://dbpedia.org/ontology/Company"
+					],
+					"confidence": 0.81,
+					"id": "Q1775296",
+					"title": "Space Shuttle program",
+					"uri": "https://en.wikipedia.org/wiki/Space_Shuttle_program",
+					"abstract": "The Space Shuttle program was the fourth human spaceflight program carried out by the U.S. National Aeronautics and Space Administration (NASA), which accomplished routine transportation for Earth-to-orbit crew and cargo from 1981 to 2011. Its official name, Space Transportation System (STS), was taken from a 1969 plan for a system of reusable spacecraft of which it was the only item funded for development. It flew 135 missions and carried 355 astronauts from 16 countries, many on multiple trips. ",
+					"label": "Space Shuttle program",
+					"categories": [
+						"Space Shuttle program",
+						"NASA programs",
+						"Human spaceflight programs",
+						"1972 establishments in the United States",
+						"2011 disestablishments in the United States",
+						"Articles containing video clips"
+					],
+					"image": {
+						"full": "https://commons.wikimedia.org/wiki/Special:FilePath/Spacelab_-_Artist's_Concept.jpg",
+						"thumbnail": "https://commons.wikimedia.org/wiki/Special:FilePath/Spacelab_-_Artist's_Concept.jpg?width=300"
+					},
+					"lod": {
+						"wikipedia": "https://en.wikipedia.org/wiki/Space_Shuttle_program"
+					}
+				},
+				{
+					"start": 98,
+					"end": 102,
+					"spot": "NASA",
+					"tags": [
+						"business",
+						"org",
+						"org",
+						"org",
+						"business"
+					],
+					"types": [
+						"https://dbpedia.org/ontology/Agent",
+						"https://dbpedia.org/ontology/Organisation",
+						"https://dbpedia.org/ontology/Company"
+					],
+					"confidence": 0.8,
+					"id": "Q46611",
+					"title": "Apollo program",
+					"uri": "https://en.wikipedia.org/wiki/Apollo_program",
+					"abstract": "The Apollo program, also known as Project Apollo, was the third United States human spaceflight program carried out by the National Aeronautics and Space Administration (NASA), which succeeded in preparing and landing the first humans on the Moon from 1968 to 1972. It was first conceived during Dwight D. Eisenhowers administration as a three-person spacecraft to follow the one-person Project Mercury, which put the first Americans in space. Apollo was later dedicated to President John F. Kennedys national goal for the 1960s of \"landing a man on the Moon and returning him safely to the Earth\" in an address to Congress on May 25, 1961. It was the third US human spaceflight program to fly, preceded by the two-person Project Gemini conceived in 1961 to extend spaceflight capability in support of Apollo.",
+					"label": "Apollo program",
+					"categories": [
+						"Apollo program",
+						"1960s in the United States",
+						"1970s in the United States",
+						"Articles containing video clips",
+						"Engineering projects",
+						"Exploration of the Moon",
+						"Human spaceflight programs",
+						"NASA programs",
+						"Space program of the United States"
+					],
+					"image": {
+						"full": "https://commons.wikimedia.org/wiki/Special:FilePath/Apollo_CSM_lunar_orbit.jpg",
+						"thumbnail": "https://commons.wikimedia.org/wiki/Special:FilePath/Apollo_CSM_lunar_orbit.jpg?width=300"
+					},
+					"lod": {
+						"wikipedia": "https://en.wikipedia.org/wiki/Apollo_program"
+					}
+				},
+				{
+					"start": 98,
+					"end": 102,
+					"spot": "NASA",
+					"tags": [
+						"business",
+						"org",
+						"org",
+						"org",
+						"business"
+					],
+					"types": [
+						"https://dbpedia.org/ontology/Agent",
+						"https://dbpedia.org/ontology/Organisation",
+						"https://dbpedia.org/ontology/Company"
+					],
+					"confidence": 0.79,
+					"id": "Q5319205",
+					"title": "Dynetics",
+					"uri": "https://en.wikipedia.org/wiki/Dynetics",
+					"abstract": "Dynetics is an American applied science and information technology company headquartered in Huntsville, Alabama. Its primary customers are the United States Department of Defense (DoD), the United States Intelligence Community, and National Aeronautics and Space Administration (NASA).",
+					"label": "Dynetics",
+					"categories": [
+						"Companies based in Huntsville, Alabama",
+						"Private spaceflight companies",
+						"Aerospace companies of the United States",
+						"Defense companies of the United States",
+						"Technology companies established in 1974",
+						"American companies established in 1974",
+						"2020 mergers and acquisitions"
+					],
+					"image": {},
+					"lod": {
+						"wikipedia": "https://en.wikipedia.org/wiki/Dynetics"
+					}
+				}
+			]
+		},
+		{
+			"start": 116,
+			"end": 119,
+			"spot": "ISS",
+			"tags": [
+				"fac",
+				"org",
+				"org",
+				"business",
+				"fac"
+			],
+			"types": [],
+			"confidence": 1.0,
+			"id": "Q25271",
+			"title": "International Space Station",
+			"uri": "https://en.wikipedia.org/wiki/International_Space_Station",
+			"abstract": "The International Space Station (ISS) is a modular space station (habitable artificial satellite) in low Earth orbit. It is a multinational collaborative project involving five participating space agencies: NASA (United States), Roscosmos (Russia), JAXA (Japan), ESA (Europe), and CSA (Canada). The ownership and use of the space station is established by intergovernmental treaties and agreements. The station serves as a microgravity and space environment research laboratory in which scientific research is conducted in astrobiology, astronomy, meteorology, physics, and other fields. The ISS is suited for testing the spacecraft systems and equipment required for possible future long-duration missions to the Moon and Mars.",
+			"label": "International Space Station",
+			"categories": [
+				"International Space Station",
+				"Satellites in low Earth orbit",
+				"Populated places established in 1998",
+				"Spacecraft launched in 1998",
+				"Articles containing video clips",
+				"International science experiments",
+				"Science diplomacy",
+				"Canada–United States relations",
+				"Japan–United States relations",
+				"Russia–United States relations"
+			],
+			"image": {
+				"full": "https://commons.wikimedia.org/wiki/Special:FilePath/STS-134_International_Space_Station_after_undocking.jpg",
+				"thumbnail": "https://commons.wikimedia.org/wiki/Special:FilePath/STS-134_International_Space_Station_after_undocking.jpg?width=300"
+			},
+			"lod": {
+				"wikipedia": "https://en.wikipedia.org/wiki/International_Space_Station"
+			},
+			"extras": [
+				{
+					"start": 116,
+					"end": 119,
+					"spot": "ISS",
+					"tags": [
+						"fac",
+						"org",
+						"org",
+						"business",
+						"fac"
+					],
+					"types": [],
+					"confidence": 0.47,
+					"id": "Q17081028",
+					"title": "Institute of Semitic Studies",
+					"uri": "https://en.wikipedia.org/wiki/Institute_of_Semitic_Studies",
+					"abstract": "The Institute of Semitic Studies (ISS) is a nonprofit independent research institution based in Princeton, New Jersey dedicated to the academic study of Semitic (and other major Afroasiatic) languages and cultures. Its work seeks especially to highlight the contribution of Afroasiatic peoples to world civilization, in general, and Western culture, in particular. It was founded in Princeton in 1984 and then incorporated in 1985 and is currently directed by Ephraim Isaac a Harvard trained scholar and peace activist. The Institute also releases a bi-annual linguistically focused international scholarly journal entitled the Journal of Afroasiatic Languages (JAAL) published by the Red Sea Press. In addition to its academic journal, it also recently launched an academic monograph series called Afroasiatic Studies in collaboration with the Red Sea Press. The Institute of Semitic Studies is the first independent research institute that focuses on Semitic and Afroasiatic studies within the United States.",
+					"label": "Institute of Semitic Studies",
+					"categories": [
+						"Semitic studies"
+					],
+					"image": {},
+					"lod": {
+						"wikipedia": "https://en.wikipedia.org/wiki/Institute_of_Semitic_Studies"
+					}
+				},
+				{
+					"start": 116,
+					"end": 119,
+					"spot": "ISS",
+					"tags": [
+						"fac",
+						"org",
+						"org",
+						"business",
+						"fac"
+					],
+					"types": [],
+					"confidence": 0.46,
+					"id": "Q2811679",
+					"title": "International Institute of Social Studies",
+					"uri": "https://en.wikipedia.org/wiki/International_Institute_of_Social_Studies",
+					"abstract": "The International Institute of Social Studies (ISS) of Erasmus University Rotterdam is an independent and international graduate school of policy-oriented critical social science. ISS was established in 1952 by Dutch universities and the Netherlands Ministry of Education. The institution is located in Netherlands, The Hague, also known as The Worlds Legal Capital.",
+					"label": "International Institute of Social Studies",
+					"categories": [
+						"International Institute of Social Studies",
+						"Erasmus University Rotterdam",
+						"Educational institutions established in 1952"
+					],
+					"image": {
+						"full": "https://commons.wikimedia.org/wiki/Special:FilePath/Kortenaerkade_12,_The_Hague_img01.jpg",
+						"thumbnail": "https://commons.wikimedia.org/wiki/Special:FilePath/Kortenaerkade_12,_The_Hague_img01.jpg?width=300"
+					},
+					"lod": {
+						"wikipedia": "https://en.wikipedia.org/wiki/International_Institute_of_Social_Studies"
+					}
+				},
+				{
+					"start": 116,
+					"end": 119,
+					"spot": "ISS",
+					"tags": [
+						"fac",
+						"org",
+						"org",
+						"business",
+						"fac"
+					],
+					"types": [],
+					"confidence": 0.45,
+					"id": "Q48815838",
+					"title": "Axiom Space",
+					"uri": "https://en.wikipedia.org/wiki/Axiom_Space",
+					"abstract": "Axiom Space, Inc., also known as Axiom, is an American privately funded space infrastructure developer headquartered in Houston, Texas. Founded in 2016 by Michael T. Suffredini and Kam Ghaffarian, the company is planning commercial missions in 2022 to the International Space Station (ISS) and aims to own and operate the worlds first commercial space station in 2024. The companys leadership team is largely composed of former NASA employees, including former NASA Administrator Charles Bolden. Other key people at the company include astronauts Michael Lopez-Alegria and Brent W. Jett Jr.",
+					"label": "Axiom Space",
+					"categories": [
+						"Axiom Space",
+						"American companies established in 2016",
+						"Space-based economy",
+						"Private spaceflight companies",
+						"Space tourism",
+						"Aerospace companies of the United States",
+						"Privately held companies based in Texas"
+					],
+					"image": {},
+					"lod": {
+						"wikipedia": "https://en.wikipedia.org/wiki/Axiom_Space"
+					}
+				},
+				{
+					"start": 116,
+					"end": 119,
+					"spot": "ISS",
+					"tags": [
+						"fac",
+						"org",
+						"org",
+						"business",
+						"fac"
+					],
+					"types": [],
+					"confidence": 0.44,
+					"id": "Q48604",
+					"title": "Mir",
+					"uri": "https://en.wikipedia.org/wiki/Mir",
+					"abstract": "Mir was a space station that operated in low Earth orbit from 1986 to 2001, operated by the Soviet Union and later by Russia. Mir was the first modular space station and was assembled in orbit from 1986 to 1996. It had a greater mass than any previous spacecraft. At the time it was the largest artificial satellite in orbit, succeeded by the International Space Station (ISS) after Mirs orbit decayed. The station served as a microgravity research laboratory in which crews conducted experiments in biology, human biology, physics, astronomy, meteorology, and spacecraft systems with a goal of developing technologies required for permanent occupation of space.",
+					"label": "Mir",
+					"categories": [
+						"Mir",
+						"Space stations",
+						"Crewed spacecraft",
+						"Spacecraft which reentered in 2001",
+						"1986 in spaceflight",
+						"Crewed space program of the Soviet Union",
+						"Crewed space program of Russia",
+						"Spacecraft launched in 1986",
+						"Articles containing video clips",
+						"1986 establishments in the Soviet Union"
+					],
+					"image": {},
+					"lod": {
+						"wikipedia": "https://en.wikipedia.org/wiki/Mir"
+					}
+				}
+			]
+		},
+		{
+			"start": 134,
+			"end": 143,
+			"spot": "Starliner",
+			"tags": [
+				"product",
+				"business",
+				"product",
+				"product"
+			],
+			"types": [],
+			"confidence": 1.0,
+			"id": "Q1024445",
+			"title": "Boeing Starliner",
+			"uri": "https://en.wikipedia.org/wiki/Boeing_Starliner",
+			"abstract": "The Boeing CST-100 Starliner is a class of two partially reusable spacecraft designed to transport crew to the International Space Station (ISS) and other low-Earth orbit destinations. It is manufactured by Boeing for its participation in NASAs Commercial Crew Program (CCP). The spacecraft consists of a reusable crew capsule and an expendable service module. Starliner has not flown a crewed mission.",
+			"label": "Boeing Starliner",
+			"categories": [
+				"Boeing Starliner",
+				"Bigelow Aerospace",
+				"Crewed spacecraft",
+				"Commercial spaceflight",
+				"Supply vehicles for the International Space Station",
+				"American spacecraft",
+				"Boeing spacecraft and space launch systems|Starliner",
+				"Reusable spacecraft"
+			],
+			"image": {
+				"full": "https://commons.wikimedia.org/wiki/Special:FilePath/CST-100_Starliner_integration_with_Atlas_V_for_Orbital_Flight_Test_(KSC-20191121-PH-CSH02_0080)_(cropped).jpg",
+				"thumbnail": "https://commons.wikimedia.org/wiki/Special:FilePath/CST-100_Starliner_integration_with_Atlas_V_for_Orbital_Flight_Test_(KSC-20191121-PH-CSH02_0080)_(cropped).jpg?width=300"
+			},
+			"lod": {
+				"wikipedia": "https://en.wikipedia.org/wiki/Boeing_Starliner"
+			},
+			"extras": [
+				{
+					"start": 134,
+					"end": 143,
+					"spot": "Starliner",
+					"tags": [
+						"product",
+						"business",
+						"product",
+						"product"
+					],
+					"types": [],
+					"confidence": 0.2,
+					"id": "Q7602091",
+					"title": "Starline.kz",
+					"uri": "https://en.wikipedia.org/wiki/Starline.kz",
+					"abstract": "JSC Starline KZ, styled as StarLine.kz, was an airline based in Aktobe, Kazakhstan, which offered scheduled passenger flights from its bases at Aktobe Airport and Astana International Airport to destinations within Kazakhstan, Turkey and the United Arab Emirates, using a fleet of two Boeing 737-200 aircraft.",
+					"label": "Starline.kz",
+					"categories": [
+						"Defunct airlines of Kazakhstan",
+						"Airlines established in 2005",
+						"Airlines disestablished in 2009"
+					],
+					"image": {
+						"full": "https://commons.wikimedia.org/wiki/Special:FilePath/Starline.kz_Boeing_737-200_KvW.jpg",
+						"thumbnail": "https://commons.wikimedia.org/wiki/Special:FilePath/Starline.kz_Boeing_737-200_KvW.jpg?width=300"
+					},
+					"lod": {
+						"wikipedia": "https://en.wikipedia.org/wiki/Starline.kz"
+					}
+				},
+				{
+					"start": 134,
+					"end": 143,
+					"spot": "Starliner",
+					"tags": [
+						"product",
+						"business",
+						"product",
+						"product"
+					],
+					"types": [],
+					"confidence": 0.16,
+					"id": "Q5467934",
+					"title": "Ford Starliner",
+					"uri": "https://en.wikipedia.org/wiki/Ford_Starliner",
+					"abstract": "The Ford Starliner was the fastback version of the flagship Galaxie line of full-size Fords in 1960 and 1961.",
+					"label": "Ford Starliner",
+					"categories": [
+						"Ford vehicles|Starliner",
+						"Rear-wheel-drive vehicles",
+						"Cars introduced in 1960"
+					],
+					"image": {
+						"full": "https://commons.wikimedia.org/wiki/Special:FilePath/1960_Ford_Galaxie_Starliner.jpg",
+						"thumbnail": "https://commons.wikimedia.org/wiki/Special:FilePath/1960_Ford_Galaxie_Starliner.jpg?width=300"
+					},
+					"lod": {
+						"wikipedia": "https://en.wikipedia.org/wiki/Ford_Starliner"
+					}
+				},
+				{
+					"start": 134,
+					"end": 143,
+					"spot": "Starliner",
+					"tags": [
+						"product",
+						"business",
+						"product",
+						"product"
+					],
+					"types": [],
+					"confidence": 0.07,
+					"id": "Q60780697",
+					"title": "Starline 2200",
+					"uri": "https://en.wikipedia.org/wiki/Starline_2200",
+					"abstract": "Starline 2200 is a set of miniatures for Star Fleet Battles published by Task Force Games.",
+					"label": "Starline 2200",
+					"categories": [
+						"Miniature figures",
+						"Star Fleet Battles"
+					],
+					"image": {},
+					"lod": {
+						"wikipedia": "https://en.wikipedia.org/wiki/Starline_2200"
+					}
+				}
+			]
+		},
+		{
+			"start": 173,
+			"end": 181,
+			"spot": "SpaceX's",
+			"tags": [
+				"business",
+				"product",
+				"product",
+				"product",
+				"product"
+			],
+			"types": [
+				"https://dbpedia.org/ontology/Agent",
+				"https://dbpedia.org/ontology/Organisation",
+				"https://dbpedia.org/ontology/Company"
+			],
+			"confidence": 1.0,
+			"id": "Q193701",
+			"title": "SpaceX",
+			"uri": "https://en.wikipedia.org/wiki/SpaceX",
+			"abstract": "Space Exploration Technologies Corp. (doing business as SpaceX) is an American aerospace manufacturer, a provider of space transportation services, and a communications corporation headquartered in Hawthorne, California. SpaceX was founded in 2002 by Elon Musk with the goal of reducing space transportation costs to enable the colonization of Mars. SpaceX manufactures the Falcon 9 and Falcon Heavy launch vehicles, several rocket engines, Cargo Dragon, crew spacecraft, and Starlink communications satellites. ",
+			"label": "SpaceX",
+			"categories": [
+				"SpaceX",
+				"2002 establishments in California",
+				"Aerospace companies of the United States",
+				"American companies established in 2002",
+				"Articles containing video clips",
+				"Commercial launch service providers",
+				"Companies based in Los Angeles County, California",
+				"Elon Musk",
+				"Hawthorne, California",
+				"Hyperloop "
+			],
+			"image": {
+				"full": "https://commons.wikimedia.org/wiki/Special:FilePath/Entrance_to_SpaceX_headquarters.jpg",
+				"thumbnail": "https://commons.wikimedia.org/wiki/Special:FilePath/Entrance_to_SpaceX_headquarters.jpg?width=300"
+			},
+			"lod": {
+				"wikipedia": "https://en.wikipedia.org/wiki/SpaceX"
+			},
+			"extras": [
+				{
+					"start": 173,
+					"end": 181,
+					"spot": "SpaceX's",
+					"tags": [
+						"business",
+						"product",
+						"product",
+						"product",
+						"product"
+					],
+					"types": [
+						"https://dbpedia.org/ontology/Agent",
+						"https://dbpedia.org/ontology/Organisation",
+						"https://dbpedia.org/ontology/Company"
+					],
+					"confidence": 0.99,
+					"id": "Q96206891",
+					"title": "Crew Dragon Endeavour",
+					"uri": "https://en.wikipedia.org/wiki/Crew_Dragon_Endeavour",
+					"abstract": "Crew Dragon Endeavour (Dragon capsule C206) is a Crew Dragon spacecraft manufactured and operated by SpaceX and used by NASAs Commercial Crew Program. it has successfully completed two crewed missions to the International Space Station (ISS) with a third in progress. It was first launched into orbit atop a Falcon 9 rocket on 30 May 2020 and successfully docked to the International Space Station (ISS) as part of the Crew Dragon Demo-2 mission. This was the first crewed flight test of a Dragon capsule, carrying Doug Hurley and Bob Behnken on first crewed orbital spaceflight from the United States since STS-135 in July 2011 and the first crewed orbital spaceflight by a private company. On 2 August 2020 it returned to Earth. The spacecraft was named by Hurley and Behnken after the, aboard which they first flew into space during the STS-127 and STS-123 missions, respectively. The name Endeavour is also shared by the command module of Apollo 15. The spacecrafts second mission, Crew-2, ended 8 November 2021 after having spent almost 200 days in orbit. Crew Dragon Endeavour set the record for the longest spaceflight by a U.S. crew vehicle previously set by her sibling Crew Dragon Resilience on 2 May 2021. Collectively, the Endeavour has spent 263 days in orbit and is the crewed space capsule with most time spent in orbit so far.",
+					"label": "Crew Dragon Endeavour",
+					"categories": [
+						"SpaceX Dragon 2",
+						"Individual space vehicles",
+						"NASA spacecraft",
+						"Crewed spacecraft"
+					],
+					"image": {
+						"full": "https://commons.wikimedia.org/wiki/Special:FilePath/CCP_SpaceX_Demo-2_Dragon_(3).jpg",
+						"thumbnail": "https://commons.wikimedia.org/wiki/Special:FilePath/CCP_SpaceX_Demo-2_Dragon_(3).jpg?width=300"
+					},
+					"lod": {
+						"wikipedia": "https://en.wikipedia.org/wiki/Crew_Dragon_Endeavour"
+					}
+				},
+				{
+					"start": 173,
+					"end": 181,
+					"spot": "SpaceX's",
+					"tags": [
+						"business",
+						"product",
+						"product",
+						"product",
+						"product"
+					],
+					"types": [
+						"https://dbpedia.org/ontology/Agent",
+						"https://dbpedia.org/ontology/Organisation",
+						"https://dbpedia.org/ontology/Company"
+					],
+					"confidence": 0.69,
+					"id": "Q3038762",
+					"title": "Dragon Spacecraft Qualification Unit",
+					"uri": "https://en.wikipedia.org/wiki/Dragon_Spacecraft_Qualification_Unit",
+					"abstract": "The Dragon Spacecraft Qualification Unit (Dragon C100) was a boilerplate version of the Dragon spacecraft manufactured by SpaceX. After using it for ground tests to rate Dragons shape and mass in various tests, SpaceX launched it into low Earth orbit on the maiden flight of the Falcon 9 rocket, on June 4, 2010. SpaceX used the launch to evaluate the aerodynamic conditions on the spacecraft and performance of the carrier rocket in a real-world launch scenario, ahead of Dragon flights for NASA under the Commercial Orbital Transportation Services program. The spacecraft orbited the Earth over 300 times before decaying from orbit and reentering the atmosphere on 27 June.",
+					"label": "Dragon Spacecraft Qualification Unit",
+					"categories": [
+						"SpaceX Dragon",
+						"Spacecraft launched in 2010",
+						"Spacecraft which reentered in 2010",
+						"Spacecraft launched by Falcon rockets",
+						"Individual space vehicles",
+						"Test spaceflights",
+						"Articles containing video clips"
+					],
+					"image": {
+						"full": "https://commons.wikimedia.org/wiki/Special:FilePath/Falcon_9_launch.jpg",
+						"thumbnail": "https://commons.wikimedia.org/wiki/Special:FilePath/Falcon_9_launch.jpg?width=300"
+					},
+					"lod": {
+						"wikipedia": "https://en.wikipedia.org/wiki/Dragon_Spacecraft_Qualification_Unit"
+					}
+				},
+				{
+					"start": 173,
+					"end": 181,
+					"spot": "SpaceX's",
+					"tags": [
+						"business",
+						"product",
+						"product",
+						"product",
+						"product"
+					],
+					"types": [
+						"https://dbpedia.org/ontology/Agent",
+						"https://dbpedia.org/ontology/Organisation",
+						"https://dbpedia.org/ontology/Company"
+					],
+					"confidence": 0.68,
+					"id": "Q30105506",
+					"title": "Dragon C106",
+					"uri": "https://en.wikipedia.org/wiki/Dragon_C106",
+					"abstract": "The SpaceX Dragon C106 is a Dragon space capsule built by SpaceX. It is the first reused SpaceX Dragon capsule to be reflown into space, having its second launch in 2017. C106 was first used on CRS-4, and then used again for the CRS-11 and CRS-19 missions. It was the second capsule after C108 to be used a third time, marking a milestone in SpaceXs drive to reduce space launch costs through reusing hardware.",
+					"label": "Dragon C106",
+					"categories": [
+						"Individual space vehicles",
+						"SpaceX Dragon"
+					],
+					"image": {
+						"full": "https://commons.wikimedia.org/wiki/Special:FilePath/SpaceX_CRS-11_Dragon_capsule_after_splashdown.jpg",
+						"thumbnail": "https://commons.wikimedia.org/wiki/Special:FilePath/SpaceX_CRS-11_Dragon_capsule_after_splashdown.jpg?width=300"
+					},
+					"lod": {
+						"wikipedia": "https://en.wikipedia.org/wiki/Dragon_C106"
+					}
+				},
+				{
+					"start": 173,
+					"end": 181,
+					"spot": "SpaceX's",
+					"tags": [
+						"business",
+						"product",
+						"product",
+						"product",
+						"product"
+					],
+					"types": [
+						"https://dbpedia.org/ontology/Agent",
+						"https://dbpedia.org/ontology/Organisation",
+						"https://dbpedia.org/ontology/Company"
+					],
+					"confidence": 0.67,
+					"id": "Q42575237",
+					"title": "Dragon C108",
+					"uri": "https://en.wikipedia.org/wiki/Dragon_C108",
+					"abstract": "The SpaceX Dragon C108 is a Cargo Dragon space capsule built by SpaceX. It is the first Dragon capsule to be flown three times, having its third launch in 2019. C108 was first used on CRS-6, and then used again for the CRS-13 and CRS-18 missions. It was the first capsule to be used a third flight, marking a milestone in SpaceXs drive to reduce space launch costs through reusing hardware.",
+					"label": "Dragon C108",
+					"categories": [
+						"Individual space vehicles",
+						"SpaceX Dragon"
+					],
+					"image": {
+						"full": "https://commons.wikimedia.org/wiki/Special:FilePath/Final_processing_for_SpaceX_CRS-6_Dragon_(17076243136).jpg",
+						"thumbnail": "https://commons.wikimedia.org/wiki/Special:FilePath/Final_processing_for_SpaceX_CRS-6_Dragon_(17076243136).jpg?width=300"
+					},
+					"lod": {
+						"wikipedia": "https://en.wikipedia.org/wiki/Dragon_C108"
+					}
+				}
+			]
+		},
+		{
+			"start": 182,
+			"end": 188,
+			"spot": "Dragon",
+			"tags": [
+				"product",
+				"product",
+				"product",
+				"product",
+				"product"
+			],
+			"types": [],
+			"confidence": 1.0,
+			"id": "Q236448",
+			"title": "SpaceX Dragon",
+			"uri": "https://en.wikipedia.org/wiki/SpaceX_Dragon",
+			"abstract": "Dragon, also known as Dragon 1 or Cargo Dragon, was a class of partially reusable cargo spacecraft developed by SpaceX, an American private space transportation company. Dragon was launched into orbit by the companys Falcon 9 launch vehicle to resupply the International Space Station (ISS).",
+			"label": "SpaceX Dragon",
+			"categories": [
+				"SpaceX Dragon",
+				"SpaceX spacecraft|Dragon",
+				"Cargo spacecraft",
+				"Supply vehicles for the International Space Station|Dragon",
+				"Vehicles introduced in 2010",
+				"Commercial spaceflight",
+				"Reusable spacecraft"
+			],
+			"image": {
+				"full": "https://commons.wikimedia.org/wiki/Special:FilePath/COTS2Dragon.2..jpg",
+				"thumbnail": "https://commons.wikimedia.org/wiki/Special:FilePath/COTS2Dragon.2..jpg?width=300"
+			},
+			"lod": {
+				"wikipedia": "https://en.wikipedia.org/wiki/SpaceX_Dragon"
+			},
+			"extras": [
+				{
+					"start": 182,
+					"end": 188,
+					"spot": "Dragon",
+					"tags": [
+						"product",
+						"product",
+						"product",
+						"product",
+						"product"
+					],
+					"types": [],
+					"confidence": 0.99,
+					"id": "Q105095031",
+					"title": "Crew Dragon",
+					"uri": "https://en.wikipedia.org/wiki/Crew_Dragon",
+					"abstract": "",
+					"label": "Crew Dragon",
+					"categories": [
+						""
+					],
+					"image": {
+						"full": "https://commons.wikimedia.org/wiki/Special:FilePath/Crew_Dragon_at_the_ISS_for_Demo_Mission_1_(cropped).jpg",
+						"thumbnail": "https://commons.wikimedia.org/wiki/Special:FilePath/Crew_Dragon_at_the_ISS_for_Demo_Mission_1_(cropped).jpg?width=300"
+					},
+					"lod": {
+						"wikipedia": "https://en.wikipedia.org/wiki/Crew_Dragon"
+					}
+				},
+				{
+					"start": 182,
+					"end": 188,
+					"spot": "Dragon",
+					"tags": [
+						"product",
+						"product",
+						"product",
+						"product",
+						"product"
+					],
+					"types": [],
+					"confidence": 0.99,
+					"id": "Q109743523",
+					"title": "Cargo Dragon 2",
+					"uri": "https://en.wikipedia.org/wiki/Cargo_Dragon_2",
+					"abstract": "",
+					"label": "Cargo Dragon 2",
+					"categories": [
+						""
+					],
+					"image": {
+						"full": "https://commons.wikimedia.org/wiki/Special:FilePath/Cargo_Dragon_CRS-21_Undocking.png",
+						"thumbnail": "https://commons.wikimedia.org/wiki/Special:FilePath/Cargo_Dragon_CRS-21_Undocking.png?width=300"
+					},
+					"lod": {
+						"wikipedia": "https://en.wikipedia.org/wiki/Cargo_Dragon_2"
+					}
+				},
+				{
+					"start": 182,
+					"end": 188,
+					"spot": "Dragon",
+					"tags": [
+						"product",
+						"product",
+						"product",
+						"product",
+						"product"
+					],
+					"types": [],
+					"confidence": 0.6,
+					"id": "Q3782091",
+					"title": "HMS Dragon (D35)",
+					"uri": "https://en.wikipedia.org/wiki/HMS_Dragon_(D35)",
+					"abstract": "HMS Dragon is the fourth ship of the Type 45 or Daring-class air-defence destroyers built for the Royal Navy. She was launched in November 2008 and commissioned on 20 April 2012.",
+					"label": "HMS Dragon (D35)",
+					"categories": [
+						"Type 45 destroyers",
+						"Ships built on the River Clyde",
+						"2008 ships",
+						"Destroyers of the United Kingdom"
+					],
+					"image": {
+						"full": "https://commons.wikimedia.org/wiki/Special:FilePath/Royal_Navy_Type_45_Destroyer_HMS_Dragon_MOD_45153124.jpg",
+						"thumbnail": "https://commons.wikimedia.org/wiki/Special:FilePath/Royal_Navy_Type_45_Destroyer_HMS_Dragon_MOD_45153124.jpg?width=300"
+					},
+					"lod": {
+						"wikipedia": "https://en.wikipedia.org/wiki/HMS_Dragon_(D35)"
+					}
+				},
+				{
+					"start": 182,
+					"end": 188,
+					"spot": "Dragon",
+					"tags": [
+						"product",
+						"product",
+						"product",
+						"product",
+						"product"
+					],
+					"types": [],
+					"confidence": 0.59,
+					"id": "Q5149054",
+					"title": "Colorful Dragon",
+					"uri": "https://en.wikipedia.org/wiki/Colorful_Dragon",
+					"abstract": "Colorful Dragon, is a maze game developed and published by Sachen for the Nintendo Entertainment System on 1989 in Asia. Bunch Games later licensed the game for distribution in North America for a 1990 release, and published it as Tagin Dragon.",
+					"label": "Colorful Dragon",
+					"categories": [
+						"1989 video games",
+						"Maze games",
+						"Nintendo Entertainment System games",
+						"Nintendo Entertainment System-only games",
+						"Unauthorized video games",
+						"Top-down video games",
+						"Video games about dragons",
+						"Video games developed in Taiwan",
+						"Bunch Games games"
+					],
+					"image": {},
+					"lod": {
+						"wikipedia": "https://en.wikipedia.org/wiki/Colorful_Dragon"
+					}
+				}
+			]
+		}
+	],
+	"unlisted_annotations": [],
+	"lang": "en",
+	"timestamp": "2022-05-26T18:15:32.763262"
+}

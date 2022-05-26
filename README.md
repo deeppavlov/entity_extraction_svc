@@ -610,3 +610,8 @@ Main gateway (with Swagger UI) is available at http://localhost:9999/
 ```
 
 </details>
+
+## Run tests
+```
+pytest -v tests/test.py
+```
