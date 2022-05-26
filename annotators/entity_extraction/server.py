@@ -77,6 +77,17 @@ async def entity_extraction(payload: Payload):
         elif el_config_name == "entity_linking_en_full.json":
             entity_ids, entity_tags, entity_conf, entity_pages, image_links, categories, first_pars = \
                 el(entity_substr, tags, sentences, entity_offsets, sentences_offsets, probas)
+            for i in range(len(entity_substr)):
+                for j in range(len(entity_substr[i])):
+                    if entity_tags[i][j] == []:
+                        entity_tags[i][j] = [""]
+                    if entity_ids[i][j] == []:
+                        entity_ids[i][j] = [""]
+                        entity_conf[i][j] = [0.0]
+                        entity_pages[i][j] = [""]
+                        image_links[i][j] = [""]
+                        first_pars[i][j] = [""]
+
             entity_info = {"entity_substr": entity_substr, "entity_offsets": entity_offsets, "entity_ids": entity_ids,
                            "entity_tags": entity_tags, "entity_conf": entity_conf, "entity_pages": entity_pages,
                            "image_links": image_links, "categories": categories, "first_paragraphs": first_pars}
