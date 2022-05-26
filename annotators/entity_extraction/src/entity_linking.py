@@ -111,8 +111,8 @@ class EntityLinker(Component, Serializable):
         self.delete_hyphens = delete_hyphens
         self.re_tokenizer = re.compile(r"[\w']+|[^\w ]")
         self.related_tags = {"LOC": ["GPE"], "GPE": ["LOC"], "WORK_OF_ART": ["PRODUCT", "LAW"],
-                             "PRODUCT": ["WORK_OF_ART"], "LAW": ["WORK_OF_ART"], "ORG": ["FAC"],
-                             "PERSON": ["PER"], "PER": ["PERSON"]}
+                             "PRODUCT": ["WORK_OF_ART"], "LAW": ["WORK_OF_ART"], "ORG": ["FAC", "BUSINESS"],
+                             "PERSON": ["PER"], "PER": ["PERSON"], "BUSINESS": ["ORG"]}
         self.types_ent = {"p641": "Q31629"}
         self.using_custom_db = False
         self.db_format = db_format
@@ -494,6 +494,16 @@ class EntityLinker(Component, Serializable):
                         if elem[1] == 1.0:
                             top_entities_with_scores = [elem]
                             break
+            
+            if len(top_entities_with_scores) > 1:
+                first_ent = top_entities_with_scores[0]
+                second_ent = top_entities_with_scores[1]
+                else_ent = []
+                if len(top_entities_with_scores) > 2:
+                    else_ent = top_entities_with_scores[2:]
+                if second_ent[1] >= first_ent[1] and second_ent[2] > first_ent[2] \
+                        and first_ent[3] / max(second_ent[3], 0.5) < 2.5 and first_ent[4] == 0 and second_ent[4] > 50:
+                    top_entities_with_scores = [second_ent, first_ent] + else_ent
             
             entity_ids = [elem[0] for elem in top_entities_with_scores]
             confs = [elem[1:-2] for elem in top_entities_with_scores]
