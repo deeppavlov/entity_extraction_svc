@@ -294,7 +294,7 @@ class MergeMarkups:
                             else:
                                 y_list.append(f"B-{label}")
                             new_entity = " ".join(tokens_list[i:i + num_words])
-                            if new_entity not in self.stopwords:
+                            if new_entity.lower() not in self.stopwords:
                                 entities_list.append(new_entity)
                                 entity_positions_list.append(list(range(i, i + num_words)))
                                 if self.top_n == 1:

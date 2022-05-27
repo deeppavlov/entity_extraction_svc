@@ -37,7 +37,7 @@ ner_config = parse_config(ner_config_name)
 entity_detection_config_name = ner_config['chainer']['pipe'][1]['ner']['config_path']
 entity_detection = json.load(open(entity_detection_config_name, 'r'))
 entity_detection["chainer"]["pipe"][6]["include_misc"] = include_misc
-json.dump(entity_detection, open(entity_detection_config_name, 'w'))
+json.dump(entity_detection, open(entity_detection_config_name, 'w'), indent=2)
 
 logger.info(f"ner_config {ner_config['chainer']['pipe'][1]['ner']}")
 
