@@ -221,7 +221,8 @@ class SplitMarkups:
 @register('merge_markups')
 class MergeMarkups:
     def __init__(self, tags_file: str, use_o_tag: bool = False, long_ent_thres: float = 0.4,
-                       ent_thres: float = 0.4, top_n: int = 1, include_misc: bool = True, lang: str = "en", **kwargs):
+                       ent_thres: float = 0.4, top_n: int = 1, include_misc: bool = True, misc_thres: float = 0.88,
+                       lang: str = "en", **kwargs):
         tags_file = str(expand_path(tags_file))
         self.tags_list = []
         with open(tags_file, 'r') as fl:
@@ -235,6 +236,7 @@ class MergeMarkups:
         self.long_ent_thres = long_ent_thres
         self.top_n = top_n
         self.include_misc = include_misc
+        self.misc_thres = misc_thres
         self.lang = lang
         if self.lang == "en":
             self.stopwords = set(stopwords.words("english"))
@@ -242,18 +244,23 @@ class MergeMarkups:
             self.stopwords = set(stopwords.words("russian"))
     
     def __call__(self, tokens_batch, y_types_batch, y_spans_batch):
-        y_batch, entities_batch, entity_positions_batch, entity_tags_batch, entity_probas_batch = [], [], [], [], []
+        y_batch, entities_batch, entity_positions_batch, entity_tags_batch, entity_probas_batch, is_misc_batch = [], [], [], [], [], []
         for tokens_list, y_types_list, y_spans_list in zip(tokens_batch, y_types_batch, y_spans_batch):
             y_types_list = y_types_list.tolist()
             y_list = []
             tags_with_probas_list = []
             label = ""
+            is_misc = False
             conf = 0.0
-            entities_list, entity_positions_list, entity_tags_list, entity_probas_list = [], [], [], []
+            entities_list, entity_positions_list, entity_tags_list, entity_probas_list, is_misc_list = [], [], [], [], []
             for i in range(len(y_types_list)):
                 if y_spans_list[i].startswith("B-") or (y_spans_list[i].startswith("I-") and \
                         (i == 0 or (i > 0 and y_spans_list[i - 1] == "O"))):
                     if "MISC" not in y_spans_list[i] or ("MISC" in y_spans_list[i] and self.include_misc):
+                        if "MISC" in y_spans_list[i]:
+                            is_misc = True
+                        else:
+                            is_misc = False
                         tags_with_probas = {tag: 0.0 for tag in self.tags_list}
                         num_words = 0
                         if self.use_o_tag:
@@ -280,26 +287,49 @@ class MergeMarkups:
                         tags_with_probas_list.append(tags_with_probas)
                         label = tags_with_probas[0][0]
                         conf = tags_with_probas[0][1]
-                        if conf > self.long_ent_thres or (num_words <= 2 and conf > self.ent_thres):
-                            y_list.append(f"B-{label}")
+                        if (not is_misc and (conf > self.long_ent_thres or (num_words <= 2 and conf > self.ent_thres))) \
+                                or (is_misc and conf > self.misc_thres):
+                            if is_misc:
+                                y_list.append(f"B-MISC")
+                            else:
+                                y_list.append(f"B-{label}")
                             new_entity = " ".join(tokens_list[i:i + num_words])
                             if new_entity not in self.stopwords:
                                 entities_list.append(new_entity)
                                 entity_positions_list.append(list(range(i, i + num_words)))
                                 if self.top_n == 1:
-                                    entity_tags_list.append(tags_with_probas[0][0])
-                                    entity_probas_list.append(tags_with_probas[0][1])
+                                    if is_misc:
+                                        if tags_with_probas[0][1] > self.misc_thres:
+                                            entity_tags_list.append(tags_with_probas[0][0])
+                                        else:
+                                            entity_tags_list.append("MISC")
+                                        entity_probas_list.append(conf)
+                                    else:
+                                        entity_tags_list.append(tags_with_probas[0][0])
+                                        entity_probas_list.append(tags_with_probas[0][1])
                                 else:
-                                    entity_tags_list.append([elem[0] for elem in tags_with_probas[:self.top_n]])
-                                    entity_probas_list.append([elem[1] for elem in tags_with_probas[:self.top_n]])
+                                    if is_misc:
+                                        if tags_with_probas[0][1] > self.misc_thres:
+                                            entity_tags_list.append(["MISC", tags_with_probas[0][0]])
+                                            entity_probas_list.append([conf, conf])
+                                        else:
+                                            entity_tags_list.append(["MISC"])
+                                            entity_probas_list.append([conf])
+                                    else:
+                                        entity_tags_list.append([elem[0] for elem in tags_with_probas[:self.top_n]])
+                                        entity_probas_list.append([elem[1] for elem in tags_with_probas[:self.top_n]])
                         else:
                             y_list.append("O")
                     else:
                         y_list.append("O")
                 elif y_spans_list[i].startswith("I-"):
                     if "MISC" not in y_spans_list[i] or ("MISC" in y_spans_list[i] and self.include_misc):
-                        if conf > self.long_ent_thres or (num_words <= 2 and conf > self.ent_thres):
-                            y_list.append(f"I-{label}")
+                        if (not is_misc and (conf > self.long_ent_thres or (num_words <= 2 and conf > self.ent_thres))) \
+                                or (is_misc and conf > self.misc_thres):
+                            if is_misc:
+                                y_list.append(f"I-MISC")
+                            else:
+                                y_list.append(f"I-{label}")
                         else:
                             y_list.append("O")
                     else:

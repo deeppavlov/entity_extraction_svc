@@ -13,6 +13,7 @@ from pydantic import BaseModel
 from starlette.exceptions import HTTPException
 from starlette.middleware.cors import CORSMiddleware
 from deeppavlov import build_model
+from deeppavlov.core.commands.utils import parse_config
 from train import evaluate, ner_config, metrics_filename, LOCKFILE, LOG_PATH
 
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
@@ -30,9 +31,18 @@ app.add_middleware(
 
 ner_config_name = os.getenv("NER_CONFIG")
 el_config_name = os.getenv("EL_CONFIG")
+include_misc = bool(int(os.getenv("INCLUDE_MISC", "0")))
+
+ner_config = parse_config(ner_config_name)
+entity_detection_config_name = ner_config['chainer']['pipe'][1]['ner']['config_path']
+entity_detection = json.load(open(entity_detection_config_name, 'r'))
+entity_detection["chainer"]["pipe"][6]["include_misc"] = include_misc
+json.dump(entity_detection, open(entity_detection_config_name, 'w'))
+
+logger.info(f"ner_config {ner_config['chainer']['pipe'][1]['ner']}")
 
 try:
-    ner = build_model(ner_config_name, download=True)
+    ner = build_model(ner_config, download=True)
     el = build_model(el_config_name, download=True)
     logger.info("model loaded")
 except Exception as e:

@@ -28,6 +28,7 @@ services:
         EL_CONFIG: entity_linking_en_full.json
         PORT: 9103
         SRC_DIR: annotators/entity_extraction/
+        INCLUDE_MISC: 1
       context: ./
       dockerfile: annotators/entity_extraction/Dockerfile
     ports:
