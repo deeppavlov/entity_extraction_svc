@@ -77,6 +77,7 @@ class EntityLinker(Component, Serializable):
                  return_additional_info: bool = False,
                  tags_filename: str = None,
                  add_info_filename: str = None,
+                 num_entities_for_bert_ranking: int = 10,
                  **kwargs) -> None:
         """
 
@@ -135,6 +136,7 @@ class EntityLinker(Component, Serializable):
         self.return_additional_info = return_additional_info
         self.tags_filename = tags_filename
         self.add_info_filename = add_info_filename
+        self.num_entities_for_bert_ranking = num_entities_for_bert_ranking
         self.load()
         self.sum_tm = 0.0
         self.num_entities = 0
@@ -497,13 +499,25 @@ class EntityLinker(Component, Serializable):
                     ent_tag = tag
                 top_entities_with_scores.append((entity, substr_score, num_rels, conn_score_notag + add_types_score, conn_score_tag, page, ent_tag, descr))
             
-            entity_ids = [elem[0] for elem in top_entities_with_scores]
-            descrs = [elem[-1] for elem in top_entities_with_scores]
-            scores = self.rank_by_description([entity_substr], [entity_offsets], [entity_ids], [descrs], sentences_list,
-                                              sentences_offsets_list, [len(entity_substr)])
+            entity_ids = [elem[0] for elem in top_entities_with_scores[:self.num_entities_for_bert_ranking]]
+            descrs = [elem[-1] for elem in top_entities_with_scores[:self.num_entities_for_bert_ranking]]
+            tm_st = time.time()
+            descr_scores = self.rank_by_description([entity_substr], [entity_offsets], [entity_ids], [descrs], sentences_list,
+                                                    sentences_offsets_list, [len(entity_substr)])
+            log.info(f"{entity_substr} {round(time.time() - tm_st, 2)}")
             
-            entity_descr_scores = zip(entity_ids, descrs, scores[0])
-            entity_descr_scores = sorted(entity_descr_scores, key=lambda x: x[2], reverse=True)
+            filtered_top_entities_with_scores = []
+            for (entity, substr_score, num_rels, conn_score_notag, conn_score_tag, page, ent_tag, descr), descr_score in \
+                    zip(top_entities_with_scores, descr_scores[0]):
+                if descr_score > 0.8:
+                    filtered_top_entities_with_scores.append([entity, substr_score, num_rels, conn_score_notag,
+                                                              conn_score_tag, float(descr_score), page, ent_tag])
+            if not filtered_top_entities_with_scores:
+                for (entity, substr_score, num_rels, conn_score_notag, conn_score_tag, page, ent_tag, descr), descr_score in \
+                        zip(top_entities_with_scores, descr_scores[0]):
+                    filtered_top_entities_with_scores.append([entity, substr_score, num_rels, conn_score_notag,
+                                                              conn_score_tag, float(descr_score), page, ent_tag])
+            top_entities_with_scores = filtered_top_entities_with_scores
             
             if len(entity_substr_split) >= 4 or tag in {"TYPE_OF_SPORT", "ORG"}:
                 top_entities_with_scores = sorted(top_entities_with_scores, key=lambda x: (x[1], x[3], x[4], x[2]), reverse=True)
@@ -532,29 +546,37 @@ class EntityLinker(Component, Serializable):
                             top_entities_with_scores = [elem]
                             break
             
+            if top_entities_with_scores and top_entities_with_scores[0][1] < 0.35:
+                for n_elem in range(len(top_entities_with_scores)):
+                    if n_elem > 0 and top_entities_with_scores[n_elem][1] >= 0.9 and top_entities_with_scores[n_elem][5] > 0.8:
+                        new_entities_with_scores = [top_entities_with_scores[n_elem]] + top_entities_with_scores[:n_elem]
+                        if len(top_entities_with_scores) > n_elem:
+                            new_entities_with_scores += top_entities_with_scores[n_elem + 1:]
+                        top_entities_with_scores = new_entities_with_scores
+                        break
+            
             if len(top_entities_with_scores) > 1:
                 first_ent = top_entities_with_scores[0]
                 second_ent = top_entities_with_scores[1]
                 else_ent = []
                 if len(top_entities_with_scores) > 2:
                     else_ent = top_entities_with_scores[2:]
-                if second_ent[1] >= first_ent[1] and second_ent[2] > first_ent[2] \
-                        and first_ent[3] / max(second_ent[3], 0.5) < 2.5 and first_ent[4] < 5 and second_ent[4] > 50:
+                if first_ent[1] <= second_ent[1] and second_ent[2] / max(first_ent[2], 1) > 2 \
+                        and (second_ent[3] + second_ent[4]) / 2 > (first_ent[3] + first_ent[4]) / 2:
                     top_entities_with_scores = [second_ent, first_ent] + else_ent
             
             entity_ids = [elem[0] for elem in top_entities_with_scores]
-            confs = [elem[1:-3] for elem in top_entities_with_scores]
-            final_confs = self.calc_confs(confs, len(entity_substr_split_list))
-            ent_tags = [elem[-2].lower() for elem in top_entities_with_scores]
-            pages = [elem[-3] for elem in top_entities_with_scores]
+            confs = [elem[5] for elem in top_entities_with_scores]
+            ent_tags = [elem[-1].lower() for elem in top_entities_with_scores]
+            pages = [elem[-2] for elem in top_entities_with_scores]
             
             low_conf = False
-            if final_confs and final_confs[0] < 0.3 and confs[0][0] < 0.51:
+            if confs and confs[0] < 0.3 and confs[0][0] < 0.51:
                 low_conf = True
             if not low_conf:
                 entity_ids_list.append(copy.deepcopy(entity_ids[:self.num_entities_to_return]))
                 pages_list.append(copy.deepcopy(pages[:self.num_entities_to_return]))
-                conf_list.append(copy.deepcopy(final_confs[:self.num_entities_to_return]))
+                conf_list.append(copy.deepcopy(confs[:self.num_entities_to_return]))
                 ent_tags_list.append(copy.deepcopy(ent_tags[:self.num_entities_to_return]))
             else:
                 entity_ids_list.append([""])
