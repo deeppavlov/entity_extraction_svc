@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from logging import getLogger
 from pathlib import Path
 import torch
-from typing import Tuple, List, Optional, Union, Dict, Set
+from typing import Tuple, List, Optional, Union, Dict, Set, Any
 
 import numpy as np
 from nltk.corpus import stopwords
@@ -344,3 +344,87 @@ class MergeMarkups:
             entity_tags_batch.append(entity_tags_list)
             entity_probas_batch.append(entity_probas_list)
         return y_batch, entities_batch, entity_positions_batch, entity_tags_batch, entity_probas_batch
+
+
+@register('torch_transformers_entity_ranker_preprocessor')
+class TorchTransformersEntityRankerPreprocessor(Component):
+    """Class for tokenization of text into subtokens, encoding of subtokens with indices and obtaining positions of
+    special [ENT]-tokens
+    Args:
+        vocab_file: path to vocabulary
+        do_lower_case: set True if lowercasing is needed
+        max_seq_length: max sequence length in subtokens, including [SEP] and [CLS] tokens
+        special_tokens: list of special tokens
+        special_token_id: id of special token
+        return_special_tokens_pos: whether to return positions of found special tokens
+    """
+
+    def __init__(self,
+                 vocab_file: str,
+                 do_lower_case: bool = False,
+                 max_seq_length: int = 512,
+                 special_tokens: List[str] = None,
+                 special_token_id: int = None,
+                 return_special_tokens_pos: bool = False,
+                 **kwargs) -> None:
+        self.max_seq_length = max_seq_length
+        self.do_lower_case = do_lower_case
+        if Path(vocab_file).is_file():
+            vocab_file = str(expand_path(vocab_file))
+            self.tokenizer = AutoTokenizer(vocab_file=vocab_file,
+                                           do_lower_case=do_lower_case)
+        else:
+            self.tokenizer = AutoTokenizer.from_pretrained(vocab_file, do_lower_case=do_lower_case)
+        if special_tokens is not None:
+            special_tokens_dict = {'additional_special_tokens': special_tokens}
+            self.tokenizer.add_special_tokens(special_tokens_dict)
+        self.special_token_id = special_token_id
+        self.return_special_tokens_pos = return_special_tokens_pos
+
+    def __call__(self, texts_a: List[str]) -> Tuple[Any, List[int]]:
+        """Tokenize and find special tokens positions.
+        Args:
+            texts_a: list of texts,
+        Returns:
+            batch of :class:`transformers.data.processors.utils.InputFeatures` with subtokens, subtoken ids, \
+                subtoken mask, segment mask, or tuple of batch of InputFeatures and Batch of subtokens
+            batch of indices of special token ids in input ids sequence
+        """
+        # in case of iterator's strange behaviour
+        if isinstance(texts_a, tuple):
+            texts_a = list(texts_a)
+        if self.do_lower_case:
+            texts_a = [text.lower() for text in texts_a]
+        texts_a = [text.replace("[ENT]", "[ent]") for text in texts_a]
+        lengths = []
+        input_ids_batch = []
+        for text_a in texts_a:
+            encoding = self.tokenizer.encode_plus(
+                text_a, add_special_tokens=True, pad_to_max_length=True, return_attention_mask=True)
+            input_ids = encoding["input_ids"]
+            input_ids_batch.append(input_ids)
+            lengths.append(len(input_ids))
+
+        max_length = min(max(lengths), self.max_seq_length)
+        input_features = self.tokenizer(text=texts_a,
+                                        add_special_tokens=True,
+                                        max_length=max_length,
+                                        padding='max_length',
+                                        return_attention_mask=True,
+                                        truncation=True,
+                                        return_tensors='pt')
+        special_tokens_pos = []
+        for input_ids_list in input_ids_batch:
+            found_n = -1
+            for n, input_id in enumerate(input_ids_list):
+                if input_id == self.special_token_id:
+                    found_n = n
+                    break
+            if found_n == -1:
+                found_n = 0
+            special_tokens_pos.append(found_n)
+
+        if self.return_special_tokens_pos:
+            return input_features, special_tokens_pos
+        else:
+            return input_features

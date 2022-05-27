@@ -17,7 +17,7 @@ import re
 import sqlite3
 import time
 from logging import getLogger
-from typing import List, Dict, Tuple, Union
+from typing import List, Dict, Tuple, Union, Any
 from collections import defaultdict
 
 import numpy as np
@@ -33,6 +33,7 @@ from deeppavlov.core.common.chainer import Chainer
 from deeppavlov.core.models.serializable import Serializable
 from deeppavlov.core.commands.utils import expand_path
 from deeppavlov.core.common.file import load_pickle, save_pickle
+from src.torch_transformers_el_ranker import TorchTransformersEntityRankerInfer
 
 log = getLogger(__name__)
 
@@ -46,6 +47,7 @@ class EntityLinker(Component, Serializable):
     def __init__(self, load_path: str,
                  entities_database_filename: str = None,
                  num_entities_for_conn_ranking: int = 50,
+                 entity_descr_ranker: TorchTransformersEntityRankerInfer = None,
                  ngram_range: List[int] = None,
                  num_entities_to_return: int = 10,
                  max_text_len: int = 300,
@@ -93,6 +95,7 @@ class EntityLinker(Component, Serializable):
         self.morph = pymorphy2.MorphAnalyzer()
         self.lemmatize = lemmatize
         self.entities_database_filename = entities_database_filename
+        self.entity_descr_ranker = entity_descr_ranker
         self.num_entities_for_conn_ranking = num_entities_for_conn_ranking
         self.num_entities_to_return = num_entities_to_return
         self.max_text_len = max_text_len
@@ -404,9 +407,9 @@ class EntityLinker(Component, Serializable):
                     self.rank_by_connections(entity_substr_list, substr_tags_list, entity_sent_list,
                                              cand_ent_scores_list, entities_scores_list)
                 
-                entity_ids_list, pages_list, entity_tags_list, conf_list = self.postprocess_entities(entity_substr_split_list,
-                    entity_offsets_list, substr_tags_list, entity_sent_list, entities_with_conn_scores_list,
-                    entities_types_dict)
+                entity_ids_list, pages_list, entity_tags_list, conf_list = self.postprocess_entities(entity_substr_list,
+                    entity_substr_split_list, entity_offsets_list, substr_tags_list, entity_sent_list, entities_with_conn_scores_list,
+                    entities_types_dict, sentences_list, sentences_offsets_list)
                 
         return entity_ids_list, substr_tags_list, conf_list, entity_tags_list, pages_list
     
@@ -465,14 +468,16 @@ class EntityLinker(Component, Serializable):
                 entity_tags_dict[n] = tags_with_probas[0][1]
         return entity_tags_dict, init_cand_ent_scores_dict
     
-    def postprocess_entities(self, entity_substr_split_list, entity_offsets_list, entity_tags_list, entity_sent_list,
-                                   entities_with_conn_scores_list, entities_types_dict):
+    def postprocess_entities(self, entity_substr_list, entity_substr_split_list, entity_offsets_list, entity_tags_list,
+                                   entity_sent_list, entities_with_conn_scores_list, entities_types_dict,
+                                   sentences_list, sentences_offsets_list):
         entity_types_sent_most_freq, entity_types_most_freq = self.most_freq_types(entity_substr_split_list,
                     entity_tags_list, entity_sent_list, entities_with_conn_scores_list, entities_types_dict)
         
         entity_ids_list, pages_list, ent_tags_list, conf_list = [], [], [], []
-        for entity_substr_split, entity_offsets, tag, entity_sent, entities_with_conn_scores in \
-                zip(entity_substr_split_list, entity_offsets_list, entity_tags_list, entity_sent_list, entities_with_conn_scores_list):
+        for entity_substr, entity_substr_split, entity_offsets, tag, entity_sent, entities_with_conn_scores in \
+                zip(entity_substr_list, entity_substr_split_list, entity_offsets_list, entity_tags_list,
+                    entity_sent_list, entities_with_conn_scores_list):
             top_entities_with_scores = []
             most_freq_type = ""
             freq_types_sent_info = entity_types_sent_most_freq.get((entity_sent, tag), [])
@@ -490,7 +495,16 @@ class EntityLinker(Component, Serializable):
             
                 if not ent_tag:
                     ent_tag = tag
-                top_entities_with_scores.append((entity, substr_score, num_rels, conn_score_notag + add_types_score, conn_score_tag, page, ent_tag))
+                top_entities_with_scores.append((entity, substr_score, num_rels, conn_score_notag + add_types_score, conn_score_tag, page, ent_tag, descr))
+            
+            entity_ids = [elem[0] for elem in top_entities_with_scores]
+            descrs = [elem[-1] for elem in top_entities_with_scores]
+            scores = self.rank_by_description([entity_substr], [entity_offsets], [entity_ids], [descrs], sentences_list,
+                                              sentences_offsets_list, [len(entity_substr)])
+            
+            entity_descr_scores = zip(entity_ids, descrs, scores[0])
+            entity_descr_scores = sorted(entity_descr_scores, key=lambda x: x[2], reverse=True)
+            
             if len(entity_substr_split) >= 4 or tag in {"TYPE_OF_SPORT", "ORG"}:
                 top_entities_with_scores = sorted(top_entities_with_scores, key=lambda x: (x[1], x[3], x[4], x[2]), reverse=True)
             else:
@@ -529,10 +543,10 @@ class EntityLinker(Component, Serializable):
                     top_entities_with_scores = [second_ent, first_ent] + else_ent
             
             entity_ids = [elem[0] for elem in top_entities_with_scores]
-            confs = [elem[1:-2] for elem in top_entities_with_scores]
+            confs = [elem[1:-3] for elem in top_entities_with_scores]
             final_confs = self.calc_confs(confs, len(entity_substr_split_list))
-            ent_tags = [elem[-1].lower() for elem in top_entities_with_scores]
-            pages = [elem[-2] for elem in top_entities_with_scores]
+            ent_tags = [elem[-2].lower() for elem in top_entities_with_scores]
+            pages = [elem[-3] for elem in top_entities_with_scores]
             
             low_conf = False
             if final_confs and final_confs[0] < 0.3 and confs[0][0] < 0.51:
@@ -1373,3 +1387,86 @@ class EntityLinker(Component, Serializable):
             categories_batch.append(categories_list)
             first_par_batch.append(first_par_list)
         return images_link_batch, categories_batch, first_par_batch
+
+    def rank_by_description(
+            self,
+            entity_substr_list: List[str],
+            entity_offsets_list: List[List[int]],
+            cand_ent_list: List[List[str]],
+            cand_ent_descr_list: List[List[str]],
+            sentences_list: List[str],
+            sentences_offsets_list: List[List[int]],
+            substr_lens: List[int],
+    ) -> Tuple[Union[List[List[str]], List[str]], Union[List[List[Any]], List[Any]]]:
+        entity_ids_list = []
+        conf_list = []
+        contexts = []
+        for (
+                entity_substr,
+                (entity_start_offset, entity_end_offset),
+                candidate_entities,
+        ) in zip(entity_substr_list, entity_offsets_list, cand_ent_list):
+            sentence = ""
+            rel_start_offset = 0
+            rel_end_offset = 0
+            found_sentence_num = 0
+            for num, (sent, (sent_start_offset, sent_end_offset)) in enumerate(
+                    zip(sentences_list, sentences_offsets_list)
+            ):
+                if entity_start_offset >= sent_start_offset and entity_end_offset <= sent_end_offset:
+                    sentence = sent
+                    found_sentence_num = num
+                    rel_start_offset = entity_start_offset - sent_start_offset
+                    rel_end_offset = entity_end_offset - sent_start_offset
+                    break
+            context = ""
+            if sentence:
+                start_of_sentence = 0
+                end_of_sentence = len(sentence)
+                if len(sentence) > self.max_text_len:
+                    start_of_sentence = max(rel_start_offset - self.max_text_len // 2, 0)
+                    end_of_sentence = min(rel_end_offset + self.max_text_len // 2, len(sentence))
+                context = (
+                        sentence[start_of_sentence:rel_start_offset] + "[ent]" + sentence[
+                                                                                 rel_end_offset:end_of_sentence]
+                )
+                if self.full_paragraph:
+                    cur_sent_len = len(re.findall(self.re_tokenizer, context))
+                    first_sentence_num = found_sentence_num
+                    last_sentence_num = found_sentence_num
+                    context = [context]
+                    while True:
+                        added = False
+                        if last_sentence_num < len(sentences_list) - 1:
+                            last_sentence_len = len(
+                                re.findall(
+                                    self.re_tokenizer,
+                                    sentences_list[last_sentence_num + 1],
+                                )
+                            )
+                            if cur_sent_len + last_sentence_len < self.max_paragraph_len:
+                                context.append(sentences_list[last_sentence_num + 1])
+                                cur_sent_len += last_sentence_len
+                                last_sentence_num += 1
+                                added = True
+                        if first_sentence_num > 0:
+                            first_sentence_len = len(
+                                re.findall(
+                                    self.re_tokenizer,
+                                    sentences_list[first_sentence_num - 1],
+                                )
+                            )
+                            if cur_sent_len + first_sentence_len < self.max_paragraph_len:
+                                context = [sentences_list[first_sentence_num - 1]] + context
+                                cur_sent_len += first_sentence_len
+                                first_sentence_num -= 1
+                                added = True
+                        if not added:
+                            break
+                    context = " ".join(context)
+
+            log.debug(f"rank, context: {context}")
+            contexts.append(context)
+
+        scores_list = self.entity_descr_ranker(contexts, cand_ent_list, cand_ent_descr_list)
+        return scores_list
