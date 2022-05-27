@@ -201,7 +201,8 @@ class EntityLinker(Component, Serializable):
     
     def parse_custom_database(self, elements_list, label_relation, type_relation, type_to_tag_dict):
         self.using_custom_db = True
-        self.conn.close()
+        if not self.tags_filename:
+            self.conn.close()
         i = 0
         while True:
             db_path = self.load_path / f"custom_database{i}.db"
@@ -212,7 +213,7 @@ class EntityLinker(Component, Serializable):
         self.conn = sqlite3.connect(str(self.load_path / f"custom_database{i}.db"), check_same_thread=False)
         self.cur = self.conn.cursor()
         query = "CREATE VIRTUAL TABLE IF NOT EXISTS inverted_index USING fts5(title, entity_id, num_rels " + \
-                "UNINDEXED, tag, page, p31, p131, p641, triplets UNINDEXED, tokenize = 'porter ascii');"
+                "UNINDEXED, tag, page, descr, entity_title, name_or_alias, p31, p131, p641, triplets UNINDEXED, tokenize = 'porter ascii');"
         self.cur.execute(query)
         labels_dict = {}
         triplets_dict = {}
@@ -255,7 +256,7 @@ class EntityLinker(Component, Serializable):
                 num_rels += 1
             cur_triplets_list = []
             for rel, obj_list in cur_triplets_dict.items():
-                cur_triplets_list.append([rel] + obj)
+                cur_triplets_list.append([rel] + obj_list)
             cur_triplets_list = [" ".join(triplet) for triplet in cur_triplets_list]
             triplets_str = "---".join(cur_triplets_list)
             tag = "MISC"
@@ -264,8 +265,8 @@ class EntityLinker(Component, Serializable):
             
             for entity_label in labels:
                 query = '''INSERT INTO inverted_index ''' + \
-                    '''VALUES ('{}', '{}', {}, '{}', '{}', '{}', '{}', '{}', '{}')'''.format(entity_label.lower(),
-                        entity, num_rels, tag, "", types_str, "", "", triplets_str)
+                    '''VALUES ('{}', '{}', {}, '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}')'''.format(entity_label.lower(),
+                        entity, num_rels, tag, "", "", "", "", types_str, "", "", triplets_str)
                 self.cur.execute(query)
         self.conn.commit()
 
@@ -502,8 +503,11 @@ class EntityLinker(Component, Serializable):
             entity_ids = [elem[0] for elem in top_entities_with_scores[:self.num_entities_for_bert_ranking]]
             descrs = [elem[-1] for elem in top_entities_with_scores[:self.num_entities_for_bert_ranking]]
             tm_st = time.time()
-            descr_scores = self.rank_by_description([entity_substr], [entity_offsets], [entity_ids], [descrs], sentences_list,
-                                                    sentences_offsets_list, [len(entity_substr)])
+            if self.using_custom_db:
+                descr_scores = [[1.0 for _ in entity_ids]]
+            else:
+                descr_scores = self.rank_by_description([entity_substr], [entity_offsets], [entity_ids], [descrs], sentences_list,
+                                                        sentences_offsets_list, [len(entity_substr)])
             log.info(f"{entity_substr} {round(time.time() - tm_st, 2)}")
             
             filtered_top_entities_with_scores = []
@@ -566,17 +570,18 @@ class EntityLinker(Component, Serializable):
                     top_entities_with_scores = [second_ent, first_ent] + else_ent
             
             entity_ids = [elem[0] for elem in top_entities_with_scores]
-            confs = [elem[5] for elem in top_entities_with_scores]
+            confs = [elem[1:6] for elem in top_entities_with_scores]
+            final_confs = [elem[5] for elem in top_entities_with_scores]
             ent_tags = [elem[-1].lower() for elem in top_entities_with_scores]
             pages = [elem[-2] for elem in top_entities_with_scores]
             
             low_conf = False
-            if confs and confs[0] < 0.3 and confs[0][0] < 0.51:
+            if confs and confs[0][0] < 0.3 and confs[0][4] < 0.51 and not self.using_custom_db:
                 low_conf = True
             if not low_conf:
                 entity_ids_list.append(copy.deepcopy(entity_ids[:self.num_entities_to_return]))
                 pages_list.append(copy.deepcopy(pages[:self.num_entities_to_return]))
-                conf_list.append(copy.deepcopy(confs[:self.num_entities_to_return]))
+                conf_list.append(copy.deepcopy(final_confs[:self.num_entities_to_return]))
                 ent_tags_list.append(copy.deepcopy(ent_tags[:self.num_entities_to_return]))
             else:
                 entity_ids_list.append([""])
@@ -878,7 +883,7 @@ class EntityLinker(Component, Serializable):
         cand_ent_init = defaultdict(set)
         entity_substr = entity_substr.replace('.', '').replace(',', '').strip()
         if entity_substr:
-            if self.tags_filename:
+            if self.tags_filename and not self.using_custom_db:
                 for tag in tags:
                     query_str = self.make_query_str(entity_substr, None, rels_dict)
                     log.info(f"query_str {query_str} entity_substr {entity_substr}")
@@ -896,7 +901,7 @@ class EntityLinker(Component, Serializable):
                     cand_ent_init = self.process_cand_ent(cand_ent_init, entities_and_ids, entity_substr_split, tags)
         
         if rels_dict and not cand_ent_init:
-            if self.tags_filename:
+            if self.tags_filename and not self.using_custom_db:
                 for tag in tags:
                     query_str = self.make_query_str(entity_substr)
                     log.info(f"query_str {query_str} entity_substr {entity_substr}")
@@ -1004,7 +1009,7 @@ class EntityLinker(Component, Serializable):
     
     def find_fuzzy_match_sqlite(self, entity_substr_split, tags):
         cand_ent_init = defaultdict(set)
-        if self.tags_filename:
+        if self.tags_filename and not self.using_custom_db:
             for tag in tags:
                 query_str = self.make_query_str(entity_substr_split)
                 try:
