@@ -86,7 +86,7 @@ async def entity_extraction(payload: Payload):
             entity_info = {"entity_substr": entity_substr, "entity_offsets": entity_offsets, "entity_ids": entity_ids,
                            "entity_tags": entity_tags, "entity_conf": entity_conf, "entity_pages": entity_pages}
         elif el_config_name == "entity_linking_en_full.json":
-            entity_ids, entity_tags, entity_conf, entity_pages, image_links, categories, first_pars = \
+            entity_ids, entity_tags, entity_conf, entity_pages, image_links, categories, first_pars, dbpedia_types = \
                 el(entity_substr, tags, sentences, entity_offsets, sentences_offsets, probas)
             for i in range(len(entity_substr)):
                 for j in range(len(entity_substr[i])):
@@ -98,10 +98,12 @@ async def entity_extraction(payload: Payload):
                         entity_pages[i][j] = [""]
                         image_links[i][j] = [""]
                         first_pars[i][j] = [""]
+                        dbpedia_types[i][j] = [[]]
 
             entity_info = {"entity_substr": entity_substr, "entity_offsets": entity_offsets, "entity_ids": entity_ids,
                            "entity_tags": entity_tags, "entity_conf": entity_conf, "entity_pages": entity_pages,
-                           "image_links": image_links, "categories": categories, "first_paragraphs": first_pars}
+                           "image_links": image_links, "categories": categories, "first_paragraphs": first_pars,
+                           "dbpedia_types": dbpedia_types}
     except Exception as e:
         logger.exception(e)
     total_time = time.time() - st_time

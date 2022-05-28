@@ -324,12 +324,12 @@ class EntityLinker(Component, Serializable):
                 entity_sent_list.append(found_n)
             entity_sent_batch.append(entity_sent_list)
         
-        entity_ids_batch, entity_tags_batch, entity_conf_batch, entity_pages_batch = [], [], [], []
+        entity_ids_batch, entity_tags_batch, entity_conf_batch, entity_pages_batch, wiki_types_batch = [], [], [], [], []
         for entity_substr_list, entity_offsets_list, entity_sent_list, sentences_list, \
                 sentences_offsets_list, tags_with_probas_list in \
                 zip(entity_substr_batch, entity_offsets_batch, entity_sent_batch, sentences_batch,
                     sentences_offsets_batch, tags_with_probas_batch):
-            entity_ids_list, substr_tags_list, entity_conf_list, entity_tags_list, entity_pages_list = \
+            entity_ids_list, substr_tags_list, entity_conf_list, entity_tags_list, entity_pages_list, wiki_types_list = \
                 self.link_entities(entity_substr_list, entity_offsets_list, entity_sent_list, tags_with_probas_list,
                                    sentences_list, sentences_offsets_list)
             log.info(f"entity_ids_list {entity_ids_list[:10]} entity_conf_list {entity_conf_list[:10]}")
@@ -337,11 +337,13 @@ class EntityLinker(Component, Serializable):
             entity_tags_batch.append(entity_tags_list)
             entity_conf_batch.append(entity_conf_list)
             entity_pages_batch.append(entity_pages_list)
+            wiki_types_batch.append(wiki_types_list)
 
-        images_link_batch, categories_batch, first_par_batch = self.extract_additional_info(entity_ids_batch)
+        images_link_batch, categories_batch, first_par_batch, dbpedia_types_batch = \
+            self.extract_additional_info(entity_ids_batch, wiki_types_batch)
         if self.return_additional_info:
             return entity_ids_batch, entity_tags_batch, entity_conf_batch, entity_pages_batch, images_link_batch, \
-                categories_batch, first_par_batch
+                categories_batch, first_par_batch, dbpedia_types_batch
         else:
             return entity_ids_batch, entity_tags_batch, entity_conf_batch, entity_pages_batch
     
@@ -410,11 +412,11 @@ class EntityLinker(Component, Serializable):
                     self.rank_by_connections(entity_substr_list, substr_tags_list, entity_sent_list,
                                              cand_ent_scores_list, entities_scores_list)
                 
-                entity_ids_list, pages_list, entity_tags_list, conf_list = self.postprocess_entities(entity_substr_list,
+                entity_ids_list, pages_list, entity_tags_list, conf_list, wiki_types_list = self.postprocess_entities(entity_substr_list,
                     entity_substr_split_list, entity_offsets_list, substr_tags_list, entity_sent_list, entities_with_conn_scores_list,
                     entities_types_dict, sentences_list, sentences_offsets_list)
                 
-        return entity_ids_list, substr_tags_list, conf_list, entity_tags_list, pages_list
+        return entity_ids_list, substr_tags_list, conf_list, entity_tags_list, pages_list, wiki_types_list
     
     def get_cand_ent_customdb(self, entity_substr_list, entity_substr_split_list, entity_sent_list,
                                     tags_with_probas_list, sentences_list):
@@ -477,7 +479,7 @@ class EntityLinker(Component, Serializable):
         entity_types_sent_most_freq, entity_types_most_freq = self.most_freq_types(entity_substr_split_list,
                     entity_tags_list, entity_sent_list, entities_with_conn_scores_list, entities_types_dict)
         
-        entity_ids_list, pages_list, ent_tags_list, conf_list = [], [], [], []
+        entity_ids_list, pages_list, ent_tags_list, conf_list, wiki_types_list = [], [], [], [], []
         for entity_substr, entity_substr_split, entity_offsets, tag, entity_sent, entities_with_conn_scores in \
                 zip(entity_substr_list, entity_substr_split_list, entity_offsets_list, entity_tags_list,
                     entity_sent_list, entities_with_conn_scores_list):
@@ -489,7 +491,7 @@ class EntityLinker(Component, Serializable):
                     (freq_types_sent_info[1][0] >= 4 or (freq_types_info[1][0] >= 2 and freq_types_info[0] == freq_types_sent_info[0])):
                 most_freq_type = freq_types_info[0]
             
-            for entity, substr_score, num_rels, page, descr, ent_tag, conn_score_notag, conn_score_tag in entities_with_conn_scores:
+            for entity, substr_score, num_rels, page, descr, wiki_types, ent_tag, conn_score_notag, conn_score_tag in entities_with_conn_scores:
                 add_types_score = 0
                 cur_types = entities_types_dict.get(entity, [])
                 for cur_type in cur_types:
@@ -498,7 +500,7 @@ class EntityLinker(Component, Serializable):
             
                 if not ent_tag:
                     ent_tag = tag
-                top_entities_with_scores.append((entity, substr_score, num_rels, conn_score_notag + add_types_score, conn_score_tag, page, ent_tag, descr))
+                top_entities_with_scores.append((entity, substr_score, num_rels, conn_score_notag + add_types_score, conn_score_tag, page, wiki_types, ent_tag, descr))
             
             entity_ids = [elem[0] for elem in top_entities_with_scores[:self.num_entities_for_bert_ranking]]
             descrs = [elem[-1] for elem in top_entities_with_scores[:self.num_entities_for_bert_ranking]]
@@ -511,16 +513,16 @@ class EntityLinker(Component, Serializable):
             log.info(f"{entity_substr} {round(time.time() - tm_st, 2)}")
             
             filtered_top_entities_with_scores = []
-            for (entity, substr_score, num_rels, conn_score_notag, conn_score_tag, page, ent_tag, descr), descr_score in \
+            for (entity, substr_score, num_rels, conn_score_notag, conn_score_tag, page, wiki_types, ent_tag, descr), descr_score in \
                     zip(top_entities_with_scores, descr_scores[0]):
                 if descr_score > 0.8:
                     filtered_top_entities_with_scores.append([entity, substr_score, num_rels, conn_score_notag,
-                                                              conn_score_tag, float(descr_score), page, ent_tag])
+                                                              conn_score_tag, float(descr_score), page, wiki_types, ent_tag])
             if not filtered_top_entities_with_scores:
-                for (entity, substr_score, num_rels, conn_score_notag, conn_score_tag, page, ent_tag, descr), descr_score in \
+                for (entity, substr_score, num_rels, conn_score_notag, conn_score_tag, page, wiki_types, ent_tag, descr), descr_score in \
                         zip(top_entities_with_scores, descr_scores[0]):
                     filtered_top_entities_with_scores.append([entity, substr_score, num_rels, conn_score_notag,
-                                                              conn_score_tag, float(descr_score), page, ent_tag])
+                                                              conn_score_tag, float(descr_score), page, wiki_types, ent_tag])
             top_entities_with_scores = filtered_top_entities_with_scores
             
             if len(entity_substr_split) >= 4 or tag in {"TYPE_OF_SPORT", "ORG"}:
@@ -573,7 +575,8 @@ class EntityLinker(Component, Serializable):
             confs = [elem[1:6] for elem in top_entities_with_scores]
             final_confs = [elem[5] for elem in top_entities_with_scores]
             ent_tags = [elem[-1].lower() for elem in top_entities_with_scores]
-            pages = [elem[-2] for elem in top_entities_with_scores]
+            wiki_types = [elem[-2] for elem in top_entities_with_scores]
+            pages = [elem[-3] for elem in top_entities_with_scores]
             
             low_conf = False
             if confs and confs[0][0] < 0.3 and confs[0][4] < 0.51 and not self.using_custom_db:
@@ -583,6 +586,7 @@ class EntityLinker(Component, Serializable):
                 pages_list.append(copy.deepcopy(pages[:self.num_entities_to_return]))
                 conf_list.append(copy.deepcopy(final_confs[:self.num_entities_to_return]))
                 ent_tags_list.append(copy.deepcopy(ent_tags[:self.num_entities_to_return]))
+                wiki_types_list.append(copy.deepcopy(wiki_types[:self.num_entities_to_return]))
             else:
                 entity_ids_list.append([""])
                 pages_list.append([""])
@@ -591,7 +595,8 @@ class EntityLinker(Component, Serializable):
                     ent_tags_list.append([ent_tags[0]])
                 else:
                     ent_tags_list.append([""])
-        return entity_ids_list, pages_list, ent_tags_list, conf_list
+                wiki_types_list.append([""])
+        return entity_ids_list, pages_list, ent_tags_list, conf_list, wiki_types_list
     
     def calc_confs(self, conf_list, num_ent):
         final_conf_list = []
@@ -888,6 +893,7 @@ class EntityLinker(Component, Serializable):
                     query_str = self.make_query_str(entity_substr, None, rels_dict)
                     log.info(f"query_str {query_str} entity_substr {entity_substr}")
                     if tag.lower() in self.cursors:
+                        log.info(f"tag {tag}")
                         res = self.cursors[tag.lower()].execute("SELECT * FROM inverted_index WHERE inverted_index MATCH '{}';".format(query_str))
                         entities_and_ids = res.fetchall()
                         if entities_and_ids:
@@ -1375,10 +1381,10 @@ class EntityLinker(Component, Serializable):
                 if entity_type in {"Q3467906", "Q9135", "Q218616"}:
                     ent_tag = "product"
                 
-                cur_scores = [entity] + list(entities_scores_list[i].get(entity, [0.0, 0, ""]))[:4] + \
+                cur_scores = [entity] + list(entities_scores_list[i].get(entity, [0.0, 0, "", "", ""]))[:5] + \
                     [ent_tag] + list(entities_conn_scores_list[i][entity])
                 entities_with_conn_scores.append(cur_scores)
-            entities_with_conn_scores = sorted(entities_with_conn_scores, key=lambda x: (x[6], x[7], x[1], x[2]), reverse=True)
+            entities_with_conn_scores = sorted(entities_with_conn_scores, key=lambda x: (x[7], x[8], x[1], x[2]), reverse=True)
             entities_with_conn_scores_list.append(entities_with_conn_scores)
             for entity in entities_conn_scores_list[i]:
                 confs = list(entities_scores_list[i].get(entity, [0.0, 0, ""]))[:3]
@@ -1387,12 +1393,12 @@ class EntityLinker(Component, Serializable):
         
         return entities_with_conn_scores_list, entities_conn_scores_list
 
-    def extract_additional_info(self, entity_ids_batch):
-        images_link_batch, categories_batch, first_par_batch = [], [], []
+    def extract_additional_info(self, entity_ids_batch, wiki_types_batch):
+        images_link_batch, categories_batch, first_par_batch, dbpedia_types_batch = [], [], [], []
         for entity_ids_list in entity_ids_batch:
-            images_link_list, categories_list, first_par_list = [], [], []
+            images_link_list, categories_list, first_par_list, dbpedia_types_list = [], [], [], []
             for entity_ids in entity_ids_list:
-                images_links, categories, first_pars = [], [], []
+                images_links, categories, first_pars, dbpedia_types = [], [], [], []
                 for entity_id in entity_ids:
                     if self.add_info_filename:
                         res = self.add_info_cur.execute("SELECT * FROM entity_additional_info WHERE entity_id='{}';".format(entity_id))
@@ -1403,17 +1409,21 @@ class EntityLinker(Component, Serializable):
                         images_links.append(entity_info[0][1])
                         categories.append(entity_info[0][2].split("\t"))
                         first_pars.append(entity_info[0][3])
+                        dbpedia_types.append(entity_info[0][4].split())
                     else:
                         images_links.append("")
                         categories.append([])
                         first_pars.append("")
+                        dbpedia_types.append([])
                 images_link_list.append(images_links)
                 categories_list.append(categories)
                 first_par_list.append(first_pars)
+                dbpedia_types_list.append(dbpedia_types)
             images_link_batch.append(images_link_list)
             categories_batch.append(categories_list)
             first_par_batch.append(first_par_list)
-        return images_link_batch, categories_batch, first_par_batch
+            dbpedia_types_batch.append(dbpedia_types_list)
+        return images_link_batch, categories_batch, first_par_batch, dbpedia_types_batch
 
     def rank_by_description(
             self,
