@@ -95,10 +95,12 @@ async def entity_extraction(payload: Payload):
                         entity_tags[i][j] = [""]
                     if entity_ids[i][j] == []:
                         entity_ids[i][j] = [""]
+                        entity_tags[i][j] = [[]]
                         entity_conf[i][j] = [0.0]
                         entity_pages[i][j] = [""]
                         image_links[i][j] = [""]
                         first_pars[i][j] = [""]
+                        categories[i][j] = [[]]
                         dbpedia_types[i][j] = [[]]
 
             entity_info = {"entity_substr": entity_substr, "entity_offsets": entity_offsets, "entity_ids": entity_ids,

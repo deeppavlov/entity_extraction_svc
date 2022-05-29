@@ -153,6 +153,8 @@ class EntityLinker(Component, Serializable):
                     tags.remove("O")
                 if "MISC" not in tags:
                     tags.append("MISC")
+                if "PER" not in tags:
+                    tags.append("PER")
                 self.cursors = {}
                 for tag in tags:
                     conn = sqlite3.connect(f"{self.load_path}/{tag.lower()}.db", check_same_thread=False)
@@ -878,10 +880,12 @@ class EntityLinker(Component, Serializable):
     
     def find_exact_match_sqlite(self, entity_substr, tags, rels_dict=None):
         if self.delete_hyphens:
-            if entity_substr.endswith("'s"):
-                entity_substr = entity_substr.replace("'s", "")
-            if entity_substr.endswith(" '"):
-                entity_substr = entity_substr.replace(" '", "")
+            for symb in ["'s", " '", " (", " &", ' "']:
+                if entity_substr.endswith(symb):
+                    entity_substr = entity_substr.replace(symb, "")
+            for symb in [": "]:
+                if entity_substr.startswith(symb):
+                    entity_substr = entity_substr.replace(symb, "")
             entity_substr = entity_substr.replace("-", " ").replace("'", " ")
         entity_substr_split = entity_substr.split()
         entities_and_ids = []
@@ -923,15 +927,6 @@ class EntityLinker(Component, Serializable):
                 entities_and_ids = res.fetchall()
                 if entities_and_ids:
                     cand_ent_init = self.process_cand_ent(cand_ent_init, entities_and_ids, entity_substr_split, tags)
-            
-        if (not entities_and_ids and not cand_ent_init) and self.ignore_tags:
-            query_str = self.make_query_str(entity_substr)
-            res = self.cur.execute("SELECT * FROM inverted_index WHERE inverted_index MATCH '{}';".format(query_str))
-            entities_and_ids = res.fetchall()
-
-            log.info(f"query_str {query_str} entity_substr {entity_substr} {len(entities_and_ids)}")
-            if entities_and_ids:
-                cand_ent_init = self.process_cand_ent(cand_ent_init, entities_and_ids, entity_substr_split, tags)
         
         return cand_ent_init
     
