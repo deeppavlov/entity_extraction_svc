@@ -352,7 +352,7 @@ class NerChunkModel(Component):
             if len(text_clean) != len(text_raw):
                 corr_substr_list, corr_offsets_list, init_offsets_list, corr_tags_list, corr_probas_list, \
                     corr_pos_list = [], [], [], [], [], []
-                new_text = text_raw
+                new_text = text_raw.lower()
                 pos_sum = 0
                 for entity_substr, entity_offsets, entity_tag, entity_proba, entity_pos in \
                         zip(entity_substr_list, entity_offsets_list, entity_tags_list, entity_probas_list, entity_pos_list):
@@ -362,19 +362,19 @@ class NerChunkModel(Component):
                         if symb in entity_substr:
                             for old_symb, new_symb in replace_list:
                                 entity_substr = entity_substr.replace(old_symb, new_symb)
-                            fnd = new_text.find(entity_substr)
+                            fnd = new_text.find(entity_substr.lower())
                             if fnd != -1:
                                 found = True
                                 break
                     if found:
-                        corr_offsets_list.append([pos + fnd, pos + fnd + len(entity_substr)])
+                        corr_offsets_list.append([pos_sum + fnd, pos_sum + fnd + len(entity_substr)])
                         init_offsets_list.append(entity_offsets)
                         corr_substr_list.append(entity_substr)
                         corr_tags_list.append(entity_tag)
                         corr_probas_list.append(entity_proba)
                         corr_pos_list.append(entity_pos)
                         new_text = new_text[fnd + len(entity_substr):]
-                        pos = pos + fnd + len(entity_substr)
+                        pos_sum = pos_sum + fnd + len(entity_substr)
                 
                 corr_offsets_batch.append(corr_offsets_list)
                 init_offsets_batch.append(init_offsets_list)
@@ -392,10 +392,3 @@ class NerChunkModel(Component):
 
         return corr_substr_batch, init_offsets_batch, corr_offsets_batch, corr_pos_batch, \
                corr_tags_batch, doc_sentences_offsets_batch, doc_sentences_batch, corr_probas_batch
-
-
-
-
-
-
-
