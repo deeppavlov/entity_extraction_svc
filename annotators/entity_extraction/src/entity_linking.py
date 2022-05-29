@@ -881,7 +881,7 @@ class EntityLinker(Component, Serializable):
     
     def find_exact_match_sqlite(self, entity_substr, tags, rels_dict=None):
         if self.delete_hyphens:
-            for symb in ["'s", " '", " (", " &", ' "']:
+            for symb in ["'s", " '", " (", " &", ' "', "’s", " ”", " ’"]:
                 if entity_substr.endswith(symb):
                     entity_substr = entity_substr.replace(symb, "")
             for symb in [": "]:
@@ -1405,7 +1405,12 @@ class EntityLinker(Component, Serializable):
                         images_links.append(entity_info[0][1])
                         categories.append(entity_info[0][2].split("\t"))
                         first_pars.append(entity_info[0][3])
-                        dbpedia_types.append(entity_info[0][4].split())
+                        cur_dbpedia_types = entity_info[0][4].split()
+                        if "http://dbpedia.org/ontology/Person" in cur_dbpedia_types:
+                            cur_dbpedia_types = [db_tp for db_tp in cur_dbpedia_types if db_tp not in
+                                                 {"http://dbpedia.org/ontology/Animal", "http://dbpedia.org/ontology/Eukaryote",
+                                                  "http://dbpedia.org/ontology/Species"}]
+                        dbpedia_types.append(cur_dbpedia_types)
                     else:
                         images_links.append("")
                         categories.append([])

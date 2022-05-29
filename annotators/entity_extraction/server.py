@@ -78,7 +78,6 @@ async def entity_extraction(payload: Payload):
     st_time = time.time()
     texts = payload.texts
     texts = add_stop_signs(texts)
-    texts = [text.replace("’", "'") for text in texts]
     entity_info = {}
     try:
         entity_substr, init_entity_offsets, entity_offsets, entity_positions, tags, sentences_offsets, sentences, \
