@@ -438,6 +438,7 @@ class EntityLinker(Component, Serializable):
         entity_tags_dict = {}
         init_cand_ent_scores_dict = {n: [] for n in range(len(entity_substr_list))}
         types_of_sport_ent, types_of_sport_tr = set(), set()
+        already_found = set()
         for num_iter in range(5):
             for n, (entity_substr, entity_substr_split, entity_sent, tags_with_probas) in \
                     enumerate(zip(entity_substr_list, entity_substr_split_list, entity_sent_list,
@@ -454,36 +455,45 @@ class EntityLinker(Component, Serializable):
                              (num_iter == 1 and tags_for_search[0] in tags_by_iter[1] and len(entity_substr.split()) == 1) or \
                              (num_iter == 2 and tags_for_search[0] in tags_by_iter[2] and len(entity_substr.split()) > 3) or \
                              num_iter == 3):
+                        is_already_found = False
+                        if "PER" in tags_for_search:
+                            for already_found_substr in already_found:
+                                if set([word.lower() for word in already_found_substr.split()]).intersection(set([word.lower() for word in entity_substr.split()])):
+                                    is_already_found = True
+                                    break
                         cand_ent_scores = []
-                        tm_sqlite_st = time.time()
-                        if tags_for_search:
-                            p641_ent, p641_tr = [], []
-                            cand_ent_scores = self.get_cand_ent(entity_substr, entity_substr_split,
-                                tags_for_search, entity_sent, sentences_list, p641_ent, p641_tr)
-                        if cand_ent_scores:
-                            cur_ent, (cur_substr_score, cur_num_rels, cur_page, cur_descr, cur_types, cur_p131, \
-                                cur_p641, cur_triplets_str, cur_tag) = cand_ent_scores[0]
-                            if isinstance(cur_types, str):
-                                cur_types = cur_types.split()
-                            if isinstance(cur_p641, str):
-                                cur_p641 = cur_p641.split()
-                            p641_ent, p641_tr = self.postprocess_types_for_entity_filter(entity_substr,
-                                entity_sent, tags_for_search, cur_substr_score, cur_types, cur_p641)
-                        
-                        tm_sqlite_end = time.time()
+                        if not is_already_found:
+                            tm_sqlite_st = time.time()
+                            if tags_for_search:
+                                p641_ent, p641_tr = [], []
+                                cand_ent_scores = self.get_cand_ent(entity_substr, entity_substr_split,
+                                    tags_for_search, entity_sent, sentences_list, p641_ent, p641_tr)
+                            if cand_ent_scores:
+                                cur_ent, (cur_substr_score, cur_num_rels, cur_page, cur_descr, cur_types, cur_p131, \
+                                    cur_p641, cur_triplets_str, cur_tag) = cand_ent_scores[0]
+                                if isinstance(cur_types, str):
+                                    cur_types = cur_types.split()
+                                if isinstance(cur_p641, str):
+                                    cur_p641 = cur_p641.split()
+                                p641_ent, p641_tr = self.postprocess_types_for_entity_filter(entity_substr,
+                                    entity_sent, tags_for_search, cur_substr_score, cur_types, cur_p641)
+                            
+                            tm_sqlite_end = time.time()
+                            if "PER" in tags_for_search:
+                                already_found.add(entity_substr)
                         init_cand_ent_scores_dict[n] = cand_ent_scores
                 entity_tags_dict[n] = tags_with_probas[0][1]
         return entity_tags_dict, init_cand_ent_scores_dict
     
-    def postprocess_entities(self, entity_substr_list, entity_substr_split_list, entity_offsets_list, entity_tags_list,
+    def postprocess_entities(self, entity_substr_list, entity_substr_split_list, entity_offsets_list, substr_tags_list,
                                    entity_sent_list, entities_with_conn_scores_list, entities_types_dict,
                                    sentences_list, sentences_offsets_list):
         entity_types_sent_most_freq, entity_types_most_freq = self.most_freq_types(entity_substr_split_list,
-                    entity_tags_list, entity_sent_list, entities_with_conn_scores_list, entities_types_dict)
+                    substr_tags_list, entity_sent_list, entities_with_conn_scores_list, entities_types_dict)
         
         entity_ids_list, pages_list, ent_tags_list, conf_list, wiki_types_list = [], [], [], [], []
         for entity_substr, entity_substr_split, entity_offsets, tag, entity_sent, entities_with_conn_scores in \
-                zip(entity_substr_list, entity_substr_split_list, entity_offsets_list, entity_tags_list,
+                zip(entity_substr_list, entity_substr_split_list, entity_offsets_list, substr_tags_list,
                     entity_sent_list, entities_with_conn_scores_list):
             top_entities_with_scores = []
             most_freq_type = ""
@@ -573,6 +583,8 @@ class EntityLinker(Component, Serializable):
                         and (second_ent[3] + second_ent[4]) / 2 > (first_ent[3] + first_ent[4]) / 2:
                     top_entities_with_scores = [second_ent, first_ent] + else_ent
             
+            already_found = {}
+            
             entity_ids = [elem[0] for elem in top_entities_with_scores]
             confs = [elem[1:6] for elem in top_entities_with_scores]
             final_confs = [elem[5] for elem in top_entities_with_scores]
@@ -598,7 +610,44 @@ class EntityLinker(Component, Serializable):
                 else:
                     ent_tags_list.append([""])
                 wiki_types_list.append([""])
-        return entity_ids_list, pages_list, ent_tags_list, conf_list, wiki_types_list
+        
+        corr_ids_list, corr_pages_list, corr_tags_list, corr_conf_list, corr_wiki_types_list = \
+            self.correct_already_found(entity_substr_list, entity_ids_list, pages_list, substr_tags_list,
+                                       ent_tags_list, conf_list, wiki_types_list)
+        
+        return corr_ids_list, corr_pages_list, corr_tags_list, corr_conf_list, corr_wiki_types_list
+    
+    def correct_already_found(self, entity_substr_list, entity_ids_list, pages_list, substr_tags_list,
+                                    entity_tags_list, conf_list, wiki_types_list):
+        already_found = {}
+        for entity_substr, entity_ids, pages, substr_tags, entity_tags, confs, wiki_types in \
+                zip(entity_substr_list, entity_ids_list, pages_list, substr_tags_list, entity_tags_list, conf_list, wiki_types_list):
+            if len(entity_substr.split()) > 1 and "PER" in substr_tags:
+                already_found[entity_substr.lower()] = [entity_ids, pages, entity_tags, confs, wiki_types]
+        
+        corr_ids_list, corr_pages_list, corr_tags_list, corr_conf_list, corr_wiki_types_list = [], [], [], [], []
+        for entity_substr, entity_ids, substr_tags, entity_tags, pages, confs, wiki_types in \
+                zip(entity_substr_list, entity_ids_list, substr_tags_list, entity_tags_list, pages_list,
+                    conf_list, wiki_types_list):
+            already_existing = ""
+            if not entity_ids and "PER" in substr_tags:
+                for already_found_substr in already_found:
+                    if set([word.lower() for word in already_found_substr.split()]).intersection(set([word.lower() for word in entity_substr.split()])):
+                        already_existing = already_found_substr
+                        break
+            if already_existing:
+                corr_ids_list.append(already_found[already_existing][0])
+                corr_pages_list.append(already_found[already_existing][1])
+                corr_tags_list.append(already_found[already_existing][2])
+                corr_conf_list.append(already_found[already_existing][3])
+                corr_wiki_types_list.append(already_found[already_existing][4])
+            else:
+                corr_ids_list.append(entity_ids)
+                corr_pages_list.append(pages)
+                corr_tags_list.append(entity_tags)
+                corr_conf_list.append(confs)
+                corr_wiki_types_list.append(wiki_types)
+        return corr_ids_list, corr_pages_list, corr_tags_list, corr_conf_list, corr_wiki_types_list
     
     def calc_confs(self, conf_list, num_ent):
         final_conf_list = []
@@ -698,6 +747,9 @@ class EntityLinker(Component, Serializable):
             if tag in self.related_tags:
                 add_tags += self.related_tags[tag]
         tags_for_search += add_tags
+        
+        if tags_with_probas and tags_with_probas[0][1] == "PER" and tags_with_probas[0][0] > 0.33:
+            tags_for_search.append("PER")
         
         if len(entity_substr_list) == 1 and not tags_for_search:
             for tag_proba, tag in tags_with_probas[:2]:
