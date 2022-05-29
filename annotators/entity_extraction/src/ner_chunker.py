@@ -89,6 +89,13 @@ class NerChunker(Component):
                     doc = re.sub(r'\s+', ' ', doc)
                 except:
                     pass
+            elif "?xml version" in doc:
+                try:
+                    soup = BeautifulSoup(doc, "lxml")
+                    doc = soup.get_text()
+                    doc = re.sub(r'\s+', ' ', doc)
+                except:
+                    pass
             start = 0
             text = ""
             sentences_list = []

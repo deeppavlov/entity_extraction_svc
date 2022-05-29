@@ -116,9 +116,10 @@ class EntityLinker(Component, Serializable):
         self.ignore_tags = ignore_tags
         self.delete_hyphens = delete_hyphens
         self.re_tokenizer = re.compile(r"[\w']+|[^\w ]")
+        self.correct_tags_dict = {"PERSON": "PER"}
         self.related_tags = {"LOC": ["GPE"], "GPE": ["LOC"], "WORK_OF_ART": ["PRODUCT", "LAW"],
                              "PRODUCT": ["WORK_OF_ART"], "LAW": ["WORK_OF_ART"], "ORG": ["FAC", "BUSINESS"],
-                             "PERSON": ["PER"], "PER": ["PERSON"], "BUSINESS": ["ORG"]}
+                             "BUSINESS": ["ORG"]}
         self.types_ent = {"p641": "Q31629"}
         self.using_custom_db = False
         self.db_format = db_format
@@ -151,10 +152,9 @@ class EntityLinker(Component, Serializable):
                     tags.append(line.strip().split()[0])
                 if "O" in tags:
                     tags.remove("O")
-                if "MISC" not in tags:
-                    tags.append("MISC")
-                if "PER" not in tags:
-                    tags.append("PER")
+                for tag in ["MISC", "PER"]:
+                    if tag not in tags:
+                        tags.append(tag)
                 self.cursors = {}
                 for tag in tags:
                     conn = sqlite3.connect(f"{self.load_path}/{tag.lower()}.db", check_same_thread=False)
@@ -365,7 +365,7 @@ class EntityLinker(Component, Serializable):
                             sentences_list: List[str],
                             sentences_offsets_list: List[List[int]]) -> List[List[str]]:
         log.info(f"entity_substr_list {entity_substr_list} tags_with_probas_list {tags_with_probas_list}")
-        entity_ids_list, substr_tags_list, conf_list, entity_tags_list, pages_list = [], [], [], [], []
+        entity_ids_list, substr_tags_list, conf_list, entity_tags_list, pages_list, wiki_types_list = [], [], [], [], [], []
         if entity_substr_list:
             entities_scores_list = []
             cand_ent_scores_list, cand_ent_scores_init_list = [], []
@@ -706,6 +706,7 @@ class EntityLinker(Component, Serializable):
         
         if tags_with_probas and tags_with_probas[0][0] < 0.9 and tags_with_probas[0][1] in {"OCCUPATION", "CHEMICAL_ELEMENT"}:
             tags_for_search.append("MISC")
+        tags_for_search = [self.correct_tags_dict.get(tag, tag) for tag in tags_for_search]
         return tags_for_search
     
     def correct_tags(self, entity_substr, tags_for_search, tags_with_probas):
