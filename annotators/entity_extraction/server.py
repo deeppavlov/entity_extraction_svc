@@ -79,7 +79,8 @@ async def entity_extraction(payload: Payload):
     texts = [text.replace("’", "'") for text in texts]
     entity_info = {}
     try:
-        entity_substr, entity_offsets, entity_positions, tags, sentences_offsets, sentences, probas = ner(texts)
+        entity_substr, init_entity_offsets, entity_offsets, entity_positions, tags, sentences_offsets, sentences, \
+            probas = ner(texts)
         if el_config_name == "entity_linking_en.json":
             entity_ids, entity_tags, entity_conf, entity_pages = \
                 el(entity_substr, tags, sentences, entity_offsets, sentences_offsets, probas)

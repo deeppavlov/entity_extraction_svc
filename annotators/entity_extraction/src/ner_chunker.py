@@ -21,6 +21,7 @@ from collections import defaultdict
 
 import numpy as np
 import pymorphy2
+from bs4 import BeautifulSoup
 from nltk.corpus import stopwords
 from nltk import sent_tokenize
 from transformers import AutoTokenizer
@@ -81,6 +82,13 @@ class NerChunker(Component):
         for n, doc in enumerate(docs_batch):
             if self.lowercase:
                 doc = doc.lower()
+            if "<!DOCTYPE html>" in doc:
+                try:
+                    soup = BeautifulSoup(doc, "html.parser")
+                    doc = soup.get_text()
+                    doc = re.sub(r'\s+', ' ', doc)
+                except:
+                    pass
             start = 0
             text = ""
             sentences_list = []
@@ -208,7 +216,8 @@ class NerChunkModel(Component):
         self.ner = ner
         self.ner_parser = ner_parser
 
-    def __call__(self, text_batch_list: List[List[str]],
+    def __call__(self, text_raw_batch: List[str],
+                 text_batch_list: List[List[str]],
                  nums_batch_list: List[List[int]],
                  sentences_offsets_batch_list: List[List[List[Tuple[int, int]]]],
                  sentences_batch_list: List[List[List[str]]]
@@ -332,6 +341,61 @@ class NerChunkModel(Component):
         doc_entity_positions_batch.append(doc_entity_positions)
         doc_sentences_offsets_batch.append(doc_sentences_offsets)
         doc_sentences_batch.append(doc_sentences)
+        
+        corr_offsets_batch, init_offsets_batch, corr_substr_batch, corr_tags_batch, \
+            corr_probas_batch, corr_pos_batch = [], [], [], [], [], []
+        for text_raw, doc_sentences, entity_substr_list, entity_offsets_list, entity_tags_list, entity_probas_list, \
+                entity_pos_list in zip(text_raw_batch, doc_sentences_batch, doc_entity_substr_batch,
+                                       doc_entity_offsets_batch, doc_tags_batch, doc_probas_batch,
+                                       doc_entity_positions_batch):
+            text_clean = " ".join(doc_sentences)
+            if len(text_clean) != len(text_raw):
+                corr_substr_list, corr_offsets_list, init_offsets_list, corr_tags_list, corr_probas_list, \
+                    corr_pos_list = [], [], [], [], [], []
+                new_text = text_raw
+                pos_sum = 0
+                for entity_substr, entity_offsets, entity_tag, entity_proba, entity_pos in \
+                        zip(entity_substr_list, entity_offsets_list, entity_tags_list, entity_probas_list, entity_pos_list):
+                    found = False
+                    for symb, replace_list in [["", []], ["-", [("-", " - "), ("  ", " ")]], [". ", [(". ", ".")]],
+                                               ["/", [(" / ", "/")]], [" ", [(" (", "(")]], [" ’", [(" ’", "’")]]]:
+                        if symb in entity_substr:
+                            for old_symb, new_symb in replace_list:
+                                entity_substr = entity_substr.replace(old_symb, new_symb)
+                            fnd = new_text.find(entity_substr)
+                            if fnd != -1:
+                                found = True
+                                break
+                    if found:
+                        corr_offsets_list.append([pos + fnd, pos + fnd + len(entity_substr)])
+                        init_offsets_list.append(entity_offsets)
+                        corr_substr_list.append(entity_substr)
+                        corr_tags_list.append(entity_tag)
+                        corr_probas_list.append(entity_proba)
+                        corr_pos_list.append(entity_pos)
+                        new_text = new_text[fnd + len(entity_substr):]
+                        pos = pos + fnd + len(entity_substr)
+                
+                corr_offsets_batch.append(corr_offsets_list)
+                init_offsets_batch.append(init_offsets_list)
+                corr_substr_batch.append(corr_substr_list)
+                corr_tags_batch.append(corr_tags_list)
+                corr_probas_batch.append(corr_probas_list)
+                corr_pos_batch.append(corr_pos_list)
+            else:
+                corr_offsets_batch.append(entity_offsets_list)
+                init_offsets_batch.append(entity_offsets_list)
+                corr_substr_batch.append(entity_substr_list)
+                corr_tags_batch.append(entity_tags_list)
+                corr_probas_batch.append(entity_probas_list)
+                corr_pos_batch.append(entity_pos_list)
 
-        return doc_entity_substr_batch, doc_entity_offsets_batch, doc_entity_positions_batch, doc_tags_batch, \
-               doc_sentences_offsets_batch, doc_sentences_batch, doc_probas_batch
+        return corr_substr_batch, init_offsets_batch, corr_offsets_batch, corr_pos_batch, \
+               corr_tags_batch, doc_sentences_offsets_batch, doc_sentences_batch, corr_probas_batch
+
+
+
+
+
+
+
