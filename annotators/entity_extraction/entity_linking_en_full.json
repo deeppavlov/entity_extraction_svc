@@ -18,7 +18,7 @@
         "in": ["entity_substr", "tags", "sentences", "entity_offsets", "sentences_offsets", "probas"],
         "out": ["entity_ids", "entity_tags", "entity_conf", "entity_pages", "image_links", "categories", "first_pars", "dbpedia_types"],
         "load_path": "{DOWNLOADS_PATH}/entity_linking_eng/el_eng_kg_04.2022",
-        "occ_labels_filename": "occ_labels.pickle",
+        "occ_labels_filename": "{DOWNLOADS_PATH}/entity_linking_eng/occ_labels.pickle",
         "add_info_filename": "add_info.db",
         "tags_filename": "{MODELS_PATH}/entity_detection_tinyroberta_42/tag_ent.dict",
         "entity_descr_ranker": "#entity_descr_ranking",
@@ -52,6 +52,10 @@
     "download": [
       {
         "url": "http://files.deeppavlov.ai/deeppavlov_data/entity_linking/el_eng_kg_04.2022_files.tar.gz",
+        "subdir": "{DOWNLOADS_PATH}/entity_linking_eng"
+      },
+      {
+        "url": "http://files.deeppavlov.ai/deeppavlov_data/entity_linking/occ_labels.pickle",
         "subdir": "{DOWNLOADS_PATH}/entity_linking_eng"
       },
       {

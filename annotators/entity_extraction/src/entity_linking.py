@@ -168,9 +168,7 @@ class EntityLinker(Component, Serializable):
             else:
                 self.conn = sqlite3.connect(str(self.load_path / self.entities_database_filename), check_same_thread=False)
                 self.cur = self.conn.cursor()
-            occ_labels_path = self.load_path / self.occ_labels_filename
-            if occ_labels_path.exists():
-                self.occ_labels_dict = load_pickle(self.load_path / self.occ_labels_filename)
+            self.occ_labels_dict = load_pickle(expand_path(self.occ_labels_filename))
         else:
             self.name_to_q = load_pickle(self.load_path / self.name_to_q_filename)
             log.info("opened name_to_q")
