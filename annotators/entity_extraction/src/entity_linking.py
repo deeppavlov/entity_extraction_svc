@@ -168,7 +168,9 @@ class EntityLinker(Component, Serializable):
             else:
                 self.conn = sqlite3.connect(str(self.load_path / self.entities_database_filename), check_same_thread=False)
                 self.cur = self.conn.cursor()
-            self.occ_labels_dict = load_pickle(self.load_path / self.occ_labels_filename)
+            occ_labels_path = self.load_path / self.occ_labels_filename
+            if occ_labels_path.exists():
+                self.occ_labels_dict = load_pickle(self.load_path / self.occ_labels_filename)
         else:
             self.name_to_q = load_pickle(self.load_path / self.name_to_q_filename)
             log.info("opened name_to_q")
@@ -1417,7 +1419,7 @@ class EntityLinker(Component, Serializable):
         for i in range(len(entities_conn_scores_list)):
             entities_with_conn_scores = []
             for entity in entities_conn_scores_list[i]:
-                entity_type = entities_scores_list[i].get(entity, [0.0, 0, "", "", "", "", "", ""])[3]
+                entity_type = entities_scores_list[i].get(entity, [0.0, 0, "", "", "", "", "", ""])[4]
                 entity_triplets = entities_scores_list[i].get(entity, [0.0, 0, "", "", "", "", "", ""])[7]
                 ent_tag = ""
                 if entity_type == "Q5" and entity_triplets:
