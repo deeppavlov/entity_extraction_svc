@@ -79,15 +79,24 @@ async def entity_extraction(payload: Payload):
     texts = payload.texts
     texts = add_stop_signs(texts)
     entity_info = {}
+    entity_substr, init_entity_offsets, entity_offsets, entity_positions, tags, sentences_offsets, sentences, \
+            probas = [[[] for _ in texts] for _ in range(8)]
     try:
         entity_substr, init_entity_offsets, entity_offsets, entity_positions, tags, sentences_offsets, sentences, \
             probas = ner(texts)
-        if el_config_name == "entity_linking_en.json":
-            entity_ids, entity_tags, entity_conf, entity_pages = \
-                el(entity_substr, tags, sentences, entity_offsets, sentences_offsets, probas)
-            entity_info = {"entity_substr": entity_substr, "entity_offsets": entity_offsets, "entity_ids": entity_ids,
-                           "entity_tags": entity_tags, "entity_conf": entity_conf, "entity_pages": entity_pages}
-        elif el_config_name == "entity_linking_en_full.json":
+    except:
+        logger.info("error in entity detection")
+    
+    entity_ids, entity_tags, entity_conf, entity_pages, image_links, categories, first_pars, dbpedia_types = \
+        [[[] for _ in texts] for _ in range(8)]
+    
+    if el_config_name == "entity_linking_en.json":
+        entity_ids, entity_tags, entity_conf, entity_pages = \
+            el(entity_substr, tags, sentences, entity_offsets, sentences_offsets, probas)
+        entity_info = {"entity_substr": entity_substr, "entity_offsets": entity_offsets, "entity_ids": entity_ids,
+                       "entity_tags": entity_tags, "entity_conf": entity_conf, "entity_pages": entity_pages}
+    elif el_config_name == "entity_linking_en_full.json":
+        try:
             entity_ids, entity_tags, entity_conf, entity_pages, image_links, categories, first_pars, dbpedia_types = \
                 el(entity_substr, tags, sentences, entity_offsets, sentences_offsets, probas)
             for i in range(len(entity_substr)):
@@ -103,13 +112,13 @@ async def entity_extraction(payload: Payload):
                         first_pars[i][j] = [""]
                         categories[i][j] = [[]]
                         dbpedia_types[i][j] = [[]]
+        except:
+            logger.info("error in entity linking")
 
-            entity_info = {"entity_substr": entity_substr, "entity_offsets": entity_offsets, "entity_ids": entity_ids,
-                           "entity_tags": entity_tags, "entity_conf": entity_conf, "entity_pages": entity_pages,
-                           "image_links": image_links, "categories": categories, "first_paragraphs": first_pars,
-                           "dbpedia_types": dbpedia_types}
-    except Exception as e:
-        logger.exception(e)
+        entity_info = {"entity_substr": entity_substr, "entity_offsets": entity_offsets, "entity_ids": entity_ids,
+                       "entity_tags": entity_tags, "entity_conf": entity_conf, "entity_pages": entity_pages,
+                       "image_links": image_links, "categories": categories, "first_paragraphs": first_pars,
+                       "dbpedia_types": dbpedia_types}
     total_time = time.time() - st_time
     logger.info(f"entity linking exec time = {total_time:.3f}s")
     return entity_info

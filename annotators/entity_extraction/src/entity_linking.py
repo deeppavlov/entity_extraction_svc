@@ -152,6 +152,9 @@ class EntityLinker(Component, Serializable):
                     tags.append(line.strip().split()[0])
                 if "O" in tags:
                     tags.remove("O")
+                for tag in ["ACTOR", "ATHLETE", "MUSICIAN", "POLITICIAN", "WRITER", "POLITICIAN"]:
+                    if tag in tags:
+                        tags.remove(tag)
                 for tag in ["MISC", "PER"]:
                     if tag not in tags:
                         tags.append(tag)
