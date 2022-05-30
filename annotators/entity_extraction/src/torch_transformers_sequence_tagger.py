@@ -18,8 +18,9 @@ from typing import List, Union, Dict, Optional
 
 import numpy as np
 import torch
+from torch import nn
 from overrides import overrides
-from transformers import AutoModelForTokenClassification, AutoConfig
+from transformers import AutoModelForTokenClassification, AutoConfig, AutoModel
 
 from deeppavlov.core.commands.utils import expand_path
 from deeppavlov.core.common.errors import ConfigError
@@ -193,6 +194,118 @@ def token_labels_to_subtoken_labels(labels, y_mask, input_mask):
     return subtoken_labels
 
 
+class AutoModelForTwoHeadTokenClassification(nn.Module):
+    def __init__(self, pretrained_bert: str, config: AutoConfig, num_tags_seq: int, num_tags_ent: int,
+                       encoder_path: str, seq_linear_path: str, ent_linear_path: str, device: str = "gpu",
+                       using_custom_types: bool = False, classifier_dropout: float = 0.1):
+        super().__init__()
+        self.device = torch.device("cuda" if torch.cuda.is_available() and device == "gpu" else "cpu")
+        self.pretrained_bert = pretrained_bert
+        self.encoder = AutoModel.from_pretrained(self.pretrained_bert, config=config).to(self.device)
+        self.dropout = nn.Dropout(classifier_dropout)
+        self.num_tags_seq = num_tags_seq
+        self.num_tags_ent = num_tags_ent
+        self.config = config
+        self.fc_seq = nn.Linear(self.config.hidden_size, self.num_tags_seq).to(self.device)
+        self.fc_ent = nn.Linear(self.config.hidden_size, self.num_tags_ent).to(self.device)
+        self.encoder_path = encoder_path
+        self.seq_linear_path = seq_linear_path
+        self.ent_linear_path = ent_linear_path
+        self.using_custom_types = using_custom_types
+    
+    def forward(self, input_ids, attention_mask, seq_labels=None, ent_labels=None):
+        transf_output = self.encoder(input_ids, attention_mask, output_attentions=True)
+        output = transf_output.last_hidden_state
+        output = self.dropout(output)
+        bs, seq_len, emb = output.size()
+        
+        seq_logits = self.fc_seq(output)
+        ent_logits = self.fc_ent(output)
+        
+        loss = None
+        if seq_labels is not None:
+            loss_fct = torch.nn.CrossEntropyLoss()
+            if attention_mask is not None:
+                seq_active_loss = attention_mask.view(-1) == 1
+                seq_active_logits = seq_logits.view(-1, self.num_tags_seq)
+                seq_active_labels = torch.where(
+                    seq_active_loss, seq_labels.view(-1), torch.tensor(loss_fct.ignore_index).type_as(seq_labels)
+                )
+                seq_loss = loss_fct(seq_active_logits, seq_active_labels)
+                
+                ent_active_loss = ent_labels.view(-1) > 0
+                ent_labels = ent_labels - 1
+                ent_active_logits = ent_logits.view(-1, self.num_tags_ent)
+                ent_active_labels = torch.where(
+                    ent_active_loss, ent_labels.view(-1), torch.tensor(loss_fct.ignore_index).type_as(ent_labels)
+                )
+                ent_loss = loss_fct(ent_active_logits, ent_active_labels)
+            if self.using_custom_types:
+                loss = ent_loss
+            else:
+                loss = seq_loss + ent_loss
+            return loss
+        else:
+            return seq_logits, ent_logits
+    
+    def load(self):
+        encoder_path = Path(self.encoder_path).expanduser().resolve()
+        encoder_path = encoder_path.with_suffix(f".pth.tar")
+        if encoder_path.exists():
+            log.info(f"Load path {encoder_path} exists.")
+            log.info(f"Initializing `{self.__class__.__name__}` from saved.")
+            log.info(f"Loading weights from {encoder_path}.")
+            checkpoint = torch.load(encoder_path, map_location=self.device)
+            self.encoder.load_state_dict(checkpoint["model_state_dict"])
+        else:
+            log.info(f"Init from scratch. Load path {encoder_path} does not exist.")
+        
+        seq_linear_path = Path(self.seq_linear_path).expanduser().resolve()
+        seq_linear_path = seq_linear_path.with_suffix(f".pth.tar")
+        if seq_linear_path.exists():
+            log.info(f"Load path {seq_linear_path} exists.")
+            log.info(f"Initializing `{self.__class__.__name__}` from saved.")
+            log.info(f"Loading weights from {seq_linear_path}.")
+            checkpoint = torch.load(seq_linear_path, map_location=self.device)
+            self.fc_seq.load_state_dict(checkpoint["model_state_dict"])
+        else:
+            log.info(f"Init from scratch. Load path {seq_linear_path} does not exist.")
+        
+        try:
+            ent_linear_path = Path(self.ent_linear_path).expanduser().resolve()
+            ent_linear_path = ent_linear_path.with_suffix(f".pth.tar")
+            if ent_linear_path.exists():
+                log.info(f"Load path {ent_linear_path} exists.")
+                log.info(f"Initializing `{self.__class__.__name__}` from saved.")
+                log.info(f"Loading weights from {ent_linear_path}.")
+                checkpoint = torch.load(ent_linear_path, map_location=self.device)
+                self.fc_ent.load_state_dict(checkpoint["model_state_dict"])
+            else:
+                log.info(f"Init from scratch. Load path {ent_linear_path} does not exist.")
+        except:
+            self.fc_ent = nn.Linear(self.config.hidden_size, self.num_tags_ent).to(self.device)
+    
+    def save(self):
+        encoder_path = Path(self.encoder_path).expanduser().resolve()
+        encoder_path = encoder_path.with_suffix(f".pth.tar")
+        log.info(f"Saving model to {encoder_path}.")
+        torch.save({"model_state_dict": self.encoder.cpu().state_dict()}, encoder_path)
+        self.encoder.to(self.device)
+        
+        if not self.using_custom_types:
+            seq_linear_path = Path(self.seq_linear_path).expanduser().resolve()
+            seq_linear_path = seq_linear_path.with_suffix(f".pth.tar")
+            log.info(f"Saving model to {seq_linear_path}.")
+            torch.save({"model_state_dict": self.fc_seq.cpu().state_dict()}, seq_linear_path)
+            self.fc_seq.to(self.device)
+        
+        ent_linear_path = Path(self.ent_linear_path).expanduser().resolve()
+        ent_linear_path = ent_linear_path.with_suffix(f".pth.tar")
+        log.info(f"Saving model to {ent_linear_path}.")
+        torch.save({"model_state_dict": self.fc_ent.cpu().state_dict()}, ent_linear_path)
+        self.fc_ent.to(self.device)
+
+
 @register('torch_transformers_sequence_tagger')
 class TorchTransformersSequenceTagger(TorchModel):
     """Transformer-based model on PyTorch for text tagging. It predicts a label for every token (not subtoken)
@@ -219,6 +332,11 @@ class TorchTransformersSequenceTagger(TorchModel):
     def __init__(self,
                  n_tags: int,
                  pretrained_bert: str,
+                 encoder_path: str,
+                 seq_linear_path: str,
+                 ent_linear_path: str,
+                 using_custom_types: bool = False,
+                 n_tags_ent: int = None,
                  bert_config_file: Optional[str] = None,
                  return_probas: bool = False,
                  attention_probs_keep_prob: Optional[float] = None,
@@ -230,15 +348,24 @@ class TorchTransformersSequenceTagger(TorchModel):
                  load_before_drop: bool = True,
                  clip_norm: Optional[float] = None,
                  min_learning_rate: float = 1e-07,
+                 two_heads: bool = False,
+                 device: str = "gpu",
                  **kwargs) -> None:
 
+        self.device = torch.device("cuda" if torch.cuda.is_available() and device == "gpu" else "cpu")
         self.n_classes = n_tags
+        self.n_tags_ent = n_tags_ent - 1
         self.return_probas = return_probas
         self.attention_probs_keep_prob = attention_probs_keep_prob
         self.hidden_keep_prob = hidden_keep_prob
         self.clip_norm = clip_norm
+        self.two_heads = two_heads
 
         self.pretrained_bert = pretrained_bert
+        self.encoder_path = encoder_path
+        self.seq_linear_path = seq_linear_path
+        self.ent_linear_path = ent_linear_path
+        self.using_custom_types = using_custom_types
         self.bert_config_file = bert_config_file
 
         super().__init__(optimizer=optimizer,
@@ -248,12 +375,14 @@ class TorchTransformersSequenceTagger(TorchModel):
                          load_before_drop=load_before_drop,
                          min_learning_rate=min_learning_rate,
                          **kwargs)
+        self.model.to(self.device)
 
     def train_on_batch(self,
                        input_ids: Union[List[List[int]], np.ndarray],
                        input_masks: Union[List[List[int]], np.ndarray],
                        y_masks: Union[List[List[int]], np.ndarray],
-                       y: List[List[int]],
+                       seq_y: List[List[int]],
+                       ent_y: List[List[int]],
                        *args, **kwargs) -> Dict[str, float]:
         """
 
@@ -272,14 +401,19 @@ class TorchTransformersSequenceTagger(TorchModel):
         """
         b_input_ids = torch.from_numpy(input_ids).to(self.device)
         b_input_masks = torch.from_numpy(input_masks).to(self.device)
-        subtoken_labels = [token_labels_to_subtoken_labels(y_el, y_mask, input_mask)
-                           for y_el, y_mask, input_mask in zip(y, y_masks, input_masks)]
-        b_labels = torch.from_numpy(np.array(subtoken_labels)).to(torch.int64).to(self.device)
-        self.optimizer.zero_grad()
+        seq_subtoken_labels = [token_labels_to_subtoken_labels(y_el, y_mask, input_mask)
+                                for y_el, y_mask, input_mask in zip(seq_y, y_masks, input_masks)]
+        seq_b_labels = torch.from_numpy(np.array(seq_subtoken_labels)).to(torch.int64).to(self.device)
 
-        loss = self.model(input_ids=b_input_ids,
-                          attention_mask=b_input_masks,
-                          labels=b_labels).loss
+        self.optimizer.zero_grad()
+        if self.two_heads:
+            ent_subtoken_labels = [token_labels_to_subtoken_labels(y_el, y_mask, input_mask)
+                                for y_el, y_mask, input_mask in zip(ent_y, y_masks, input_masks)]
+            ent_b_labels = torch.from_numpy(np.array(ent_subtoken_labels)).to(torch.int64).to(self.device)
+            loss = self.model(input_ids=b_input_ids, attention_mask=b_input_masks,
+                              seq_labels=seq_b_labels, ent_labels=ent_b_labels)
+        else:
+            loss = self.model(input_ids=b_input_ids, attention_mask=b_input_masks, labels=seq_b_labels).loss
         loss.backward()
         # Clip the norm of the gradients to 1.0.
         # This is to help prevent the "exploding gradients" problem.
@@ -315,33 +449,42 @@ class TorchTransformersSequenceTagger(TorchModel):
             logits = self.model(b_input_ids, attention_mask=b_input_masks)
 
             # Move logits and labels to CPU and to numpy arrays
-            logits = token_from_subtoken(logits[0].detach().cpu(), torch.from_numpy(y_masks))
+            seq_logits = token_from_subtoken(logits[0].detach().cpu(), torch.from_numpy(y_masks))
+            if self.two_heads:
+                ent_logits = token_from_subtoken(logits[1].detach().cpu(), torch.from_numpy(y_masks))
 
-        probas = torch.nn.functional.softmax(logits, dim=-1)
-        probas = probas.detach().cpu().numpy()
-
-        logits = logits.detach().cpu().numpy()
-        pred = np.argmax(logits, axis=-1)
         seq_lengths = np.sum(y_masks, axis=1)
-        pred = [p[:l] for l, p in zip(seq_lengths, pred)]
-
-        if self.return_probas:
-            return pred, probas
+        
+        seq_probas = torch.nn.functional.softmax(seq_logits, dim=-1)
+        seq_probas = seq_probas.detach().cpu().numpy()
+        seq_logits = seq_logits.detach().cpu().numpy()
+        seq_pred = np.argmax(seq_logits, axis=-1).tolist()
+        seq_pred = [p[:l] for l, p in zip(seq_lengths, seq_pred)]
+        
+        if self.two_heads:
+            ent_pred = torch.nn.functional.softmax(ent_logits, dim=-1)
+            ent_pred = ent_pred.detach().cpu().numpy()
+            ent_pred = [p[:l] for l, p in zip(seq_lengths, ent_pred)]
+            return seq_pred, ent_pred
         else:
-            return pred
-
-        return pred
+            if self.return_probas:
+                return seq_probas
+            else:
+                return seq_pred
 
     @overrides
     def load(self, fname=None):
         if fname is not None:
             self.load_path = fname
 
-        self.pretrained_bert = str(expand_path(self.pretrained_bert))
         if self.pretrained_bert:
             config = AutoConfig.from_pretrained(self.pretrained_bert, num_labels=self.n_classes,
                                                 output_attentions=False, output_hidden_states=False)
-            self.model = AutoModelForTokenClassification.from_pretrained(self.pretrained_bert, config=config)
+            if self.two_heads:
+                self.model = AutoModelForTwoHeadTokenClassification(self.pretrained_bert, config, self.n_classes,
+                    self.n_tags_ent, self.encoder_path, self.seq_linear_path, self.ent_linear_path, self.using_custom_types)
+            else:
+                self.model = AutoModelForTokenClassification.from_pretrained(self.pretrained_bert, config=config)
         elif self.bert_config_file and Path(self.bert_config_file).is_file():
             self.bert_config = AutoConfig.from_json_file(str(expand_path(self.bert_config_file)))
 
@@ -361,22 +504,8 @@ class TorchTransformersSequenceTagger(TorchModel):
             self.lr_scheduler = getattr(torch.optim.lr_scheduler, self.lr_scheduler_name)(
                 self.optimizer, **self.lr_scheduler_parameters)
 
-        if self.load_path:
-            log.info(f"Load path {self.load_path} is given.")
-            if isinstance(self.load_path, Path) and not self.load_path.parent.is_dir():
-                raise ConfigError("Provided load path is incorrect!")
-
-            weights_path = Path(self.load_path.resolve())
-            weights_path = weights_path.with_suffix(f".pth.tar")
-            if weights_path.exists():
-                log.info(f"Load path {weights_path} exists.")
-                log.info(f"Initializing `{self.__class__.__name__}` from saved.")
-
-                # now load the weights, optimizer from saved
-                log.info(f"Loading weights from {weights_path}.")
-                checkpoint = torch.load(weights_path, map_location=self.device)
-                self.model.load_state_dict(checkpoint["model_state_dict"])
-                self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
-                self.epochs_done = checkpoint.get("epochs_done", 0)
-            else:
-                log.info(f"Init from scratch. Load path {weights_path} does not exist.")
+        self.model.load()
+    
+    def save(self, fname=None):
+        self.model.save()
+        self.model.to(self.device)

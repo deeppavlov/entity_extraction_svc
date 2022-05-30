@@ -1,13 +1,17 @@
 services:
   agent:
     env_file: [.env]
+    environment:
+      WAIT_HOSTS: "entity-extraction:9103, wiki-parser:9077"
+      WAIT_HOSTS_TIMEOUT: ${WAIT_TIMEOUT:-480}
     build:
       args:
-        CONFIG: pipeline.json
         PORT: 9999
         SRC_DIR: agent/
       context: ./
       dockerfile: agent/Dockerfile
+    volumes:
+      - ./agent:/src/agent
     ports:
       - 9999:9999
     deploy:
@@ -17,53 +21,29 @@ services:
         reservations:
           memory: 64M
 
-  entity-detection:
-    env_file: [.env]
+  entity-extraction:
     build:
       args:
-        CONFIG: dialog_entity_detection.json
+        NER_CONFIG: entity_detection_en.json
+        EL_CONFIG: entity_linking_en_full.json
         PORT: 9103
-        SRC_DIR: annotators/entity_detection/
-        COMMIT: 5d27dca3dfa0cf481324facd73f2e02f579f66b3
+        SRC_DIR: annotators/entity_extraction/
+        INCLUDE_MISC: 1
       context: ./
-      dockerfile: annotators/entity_detection/Dockerfile
-    command: python -m deeppavlov riseapi entity_detection.json -p 9103
+      dockerfile: annotators/entity_extraction/Dockerfile
     ports:
       - 9103:9103
     volumes:
-      - ./annotators/entity_detection:/src
+      - ./annotators/entity_extraction:/src
+      - ~/.deeppavlov:/root/.deeppavlov
     environment:
       - CUDA_VISIBLE_DEVICES=''
     deploy:
       resources:
         limits:
-          memory: 2.5G
+          memory: 2G
         reservations:
-          memory: 2.5G
-  
-  entity-linking:
-    env_file: [.env]
-    build:
-      args:
-        CONFIG: kbqa_entity_linking_lite.json
-        PORT: 9075
-        SRC_DIR: annotators/entity_linking
-        COMMIT: 5b99ac3392e8e178e2bb4f9b218d4ddb2ec2e242
-      context: ./
-      dockerfile: annotators/entity_linking/Dockerfile
-    command: python -m deeppavlov riseapi entity_linking.json -p 9075
-    ports:
-      - 9075:9075
-    volumes:
-      - ./annotators/entity_linking:/src
-    environment:
-      - CUDA_VISIBLE_DEVICES=''
-    deploy:
-      resources:
-        limits:
-          memory: 23G
-        reservations:
-          memory: 23G
+          memory: 2G
 
   wiki-parser:
     env_file: [.env]

@@ -46,10 +46,8 @@ class EntityDetectionParser(Component):
     """This class parses probabilities of tokens to be a token from the entity substring."""
 
     def __init__(self, o_tag: str, tags_file: str, entity_tags: List[str] = None, ignore_points: bool = False,
-                 return_entities_with_tags: bool = False, add_nouns: bool = False, thres_proba: float = 0.8,
-                 misc_proba: float = 0.7, **kwargs):
+                 return_entities_with_tags: bool = False, thres_proba: float = 0.8, **kwargs):
         """
-
         Args:
             entity_tags: tags for entities
             type_tag: tag for types
@@ -65,15 +63,11 @@ class EntityDetectionParser(Component):
         self.ignore_points = ignore_points
         self.return_entities_with_tags = return_entities_with_tags
         self.thres_proba = thres_proba
-        self.misc_proba = misc_proba
         self.tag_ind_dict = {}
         with open(str(expand_path(tags_file))) as fl:
             tags = [line.split('\t')[0] for line in fl.readlines()]
-            if add_nouns:
-                tags.append("B-MISC")
             if self.entity_tags is None:
-                self.entity_tags = list(
-                    {tag.split('-')[1] for tag in tags if len(tag.split('-')) > 1}.difference({self.o_tag}))
+                self.entity_tags = list({tag.split('-')[1] for tag in tags if len(tag.split('-')) > 1}.difference({self.o_tag}))
 
             self.entity_prob_ind = {entity_tag: [i for i, tag in enumerate(tags) if entity_tag in tag]
                                     for entity_tag in self.entity_tags}
@@ -85,11 +79,10 @@ class EntityDetectionParser(Component):
             self.tag_ind_dict[0] = self.o_tag
 
     def __call__(self, question_tokens_batch: List[List[str]], tokens_info_batch: List[List[List[float]]],
-                 tokens_probas_batch: np.ndarray) -> \
+                       tokens_probas_batch: np.ndarray) -> \
             Tuple[List[Union[List[str], Dict[str, List[str]]]], List[List[str]],
                   List[Union[List[int], Dict[str, List[List[int]]]]]]:
         """
-
         Args:
             question_tokens: tokenized questions
             token_probas: list of probabilities of question tokens
@@ -101,24 +94,18 @@ class EntityDetectionParser(Component):
         entities_batch = []
         positions_batch = []
         probas_batch = []
-        tokens_conf_batch = []
-        for probas in tokens_probas_batch:
-            tokens_conf = [round(1.0 - proba[0], 4) for proba in probas]
-            tokens_conf_batch.append(tokens_conf)
         for tokens, tokens_info, probas in zip(question_tokens_batch, tokens_info_batch, tokens_probas_batch):
             entities, positions, entities_probas = self.entities_from_tags(tokens, tokens_info, probas)
             entities_batch.append(entities)
             positions_batch.append(positions)
             probas_batch.append(entities_probas)
-        return entities_batch, positions_batch, probas_batch, tokens_conf_batch
+        return entities_batch, positions_batch, probas_batch
 
     def tags_from_probas(self, tokens, probas):
         """
         This method makes a list of tags from a list of probas for tags
-
         Args:
             probas: probabilities for tokens to belong to particular tags
-
         Returns:
             list of tags for tokens
             list of probabilities of these tags
@@ -141,12 +128,10 @@ class EntityDetectionParser(Component):
         """
         This method makes lists of substrings corresponding to entities and entity types
         and a list of indices of tokens which correspond to entities
-
         Args:
             tokens: list of tokens of the text
             tags: list of tags for tokens
             tag_probas: list of probabilities of tags
-
         Returns:
             list of entity substrings (or a dict of tags (keys) and entity substrings (values))
             list of substrings for entity types
@@ -175,17 +160,14 @@ class EntityDetectionParser(Component):
                             entities_dict[c_tag].append(entity)
                             entities_positions_dict[c_tag].append(entity_positions_dict[c_tag])
                             cur_probas = entity_probas_dict[c_tag]
-                            entities_probas_dict[c_tag].append(round(sum(cur_probas) / len(cur_probas), 4))
+                            entities_probas_dict[c_tag].append(round(sum(cur_probas)/len(cur_probas), 4))
                         entity_dict[c_tag] = []
                         entity_positions_dict[c_tag] = []
                         entity_probas_dict[c_tag] = []
-
+                
                 entity_dict[f_tag].append(tok)
                 entity_positions_dict[f_tag].append(cnt)
-                if f_tag == "MISC":
-                    entity_probas_dict[f_tag].append(self.misc_proba)
-                else:
-                    entity_probas_dict[f_tag].append(probas[self.tags_ind[tag]])
+                entity_probas_dict[f_tag].append(probas[self.tags_ind[tag]])
 
             elif any(entity_dict.values()):
                 for tag, entity in entity_dict.items():
@@ -197,8 +179,8 @@ class EntityDetectionParser(Component):
                         entities_dict[c_tag].append(entity)
                         entities_positions_dict[c_tag].append(entity_positions_dict[c_tag])
                         cur_probas = entity_probas_dict[c_tag]
-                        entities_probas_dict[c_tag].append(round(sum(cur_probas) / len(cur_probas), 4))
-
+                        entities_probas_dict[c_tag].append(round(sum(cur_probas)/len(cur_probas), 4))
+                        
                     entity_dict[c_tag] = []
                     entity_positions_dict[c_tag] = []
                     entity_probas_dict[c_tag] = []
@@ -207,7 +189,11 @@ class EntityDetectionParser(Component):
         entities_list = [entity for tag, entities in entities_dict.items() for entity in entities]
         entities_positions_list = [position for tag, positions in entities_positions_dict.items()
                                    for position in positions]
-        entities_probas_list = [proba for tag, proba in entities_probas_dict.items() for proba in probas]
+        entities_probas_list = [proba for tag, proba  in entities_probas_dict.items() for proba in probas]
+        
+        entities_dict = dict(entities_dict)
+        entities_positions_dict = dict(entities_positions_dict)
+        entities_probas_dict = dict(entities_probas_dict)
 
         if self.return_entities_with_tags:
             return entities_dict, entities_positions_dict, entities_probas_dict
