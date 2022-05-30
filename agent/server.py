@@ -57,6 +57,7 @@ class EntityExtractionServiceResponse(BaseModel):
     image_links: List[List[List[str]]]
     categories: List[List[List[List[str]]]]
     first_paragraphs: List[List[List[str]]]
+    dbpedia_types: List[List[List[List[str]]]]
 
     def count_entities(self):
         """Counts number of entities in entity-extraction response
@@ -106,6 +107,9 @@ class EntityExtractionServiceResponse(BaseModel):
                 pass
 
         return types_list
+
+    def dbpedia_type(self, idx, variety_idx):
+        return self.dbpedia_types[0][idx][variety_idx]
 
     def id(self, idx, variety_idx):
         return self.entity_ids[0][idx][variety_idx]
@@ -181,6 +185,7 @@ class EntityAnnotation(BaseEntityAnnotation):
     categories: List[str]
     image: Optional[dict] = {}
     lod: Optional[dict] = {}
+    dbpedia_types: List
 
     @property
     def has_wikidata(self):
@@ -242,6 +247,7 @@ def unpack_annotation(
             types=entities.types(entity_idx),
             image=entities.images(entity_idx, variety_idx),
             lod=entities.lod(entity_idx, variety_idx),
+            dbpedia_types=entities.dbpedia_type(entity_idx, variety_idx)
         )
     else:
         return BaseEntityAnnotation(

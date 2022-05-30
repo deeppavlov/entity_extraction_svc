@@ -105,7 +105,7 @@ async def entity_extraction(payload: Payload):
                         entity_tags[i][j] = [""]
                     if entity_ids[i][j] == []:
                         entity_ids[i][j] = [""]
-                        entity_tags[i][j] = [[]]
+                        entity_tags[i][j] = []
                         entity_conf[i][j] = [0.0]
                         entity_pages[i][j] = [""]
                         image_links[i][j] = [""]
