@@ -17,7 +17,8 @@ from deeppavlov import build_model
 from deeppavlov.core.commands.utils import parse_config
 from train import evaluate, ner_config, metrics_filename, LOCKFILE, LOG_PATH
 
-logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
+
+logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
@@ -84,11 +85,20 @@ async def entity_extraction(payload: Payload):
             probas = [[[] for _ in texts] for _ in range(8)]
     try:
         raw_entity_substr, raw_init_entity_offsets, raw_entity_offsets, raw_entity_positions, raw_tags, \
-        raw_sentences_offsets, raw_sentences, raw_probas = ner(texts)
+            sentences_offsets, sentences, raw_probas = ner(texts)
     except Exception as e:
         logger.info(f"{type(e)} error in entity detection: {e}")
         raw_entity_substr, raw_init_entity_offsets, raw_entity_offsets, raw_entity_positions, raw_tags, \
-        raw_sentences_offsets, raw_sentences, raw_probas = [[[] for _ in texts] for _ in range(8)]
+            sentences_offsets, sentences, raw_probas = [[[] for _ in texts] for _ in range(8)]
+
+    logger.debug(f"NER raw_entity_substr {raw_entity_substr}")
+    logger.debug(f"NER raw_init_entity_offsets {raw_init_entity_offsets}")
+    logger.debug(f"NER raw_entity_offsets {raw_entity_offsets}")
+    logger.debug(f"NER raw_entity_positions {raw_entity_positions}")
+    logger.debug(f"NER raw_tags {raw_tags}")
+    logger.debug(f"NER sentences_offsets {sentences_offsets}")
+    logger.debug(f"NER sentences {sentences}")
+    logger.debug(f"NER raw_probas {raw_probas}")
 
     for batch_idx, raw_batch in enumerate(raw_entity_substr):
         for entity_idx, entity in enumerate(raw_batch):
@@ -100,8 +110,6 @@ async def entity_extraction(payload: Payload):
                 entity_offsets[batch_idx].append(raw_entity_offsets[batch_idx][entity_idx])
                 entity_positions[batch_idx].append(raw_entity_positions[batch_idx][entity_idx])
                 tags[batch_idx].append(raw_tags[batch_idx][entity_idx])
-                sentences_offsets[batch_idx].append(raw_sentences_offsets[batch_idx][entity_idx])
-                sentences[batch_idx].append(raw_sentences[batch_idx][entity_idx])
                 probas[batch_idx].append(raw_probas[batch_idx][entity_idx])
 
     entity_ids, entity_tags, entity_conf, entity_pages, image_links, categories, first_pars, dbpedia_types = \
