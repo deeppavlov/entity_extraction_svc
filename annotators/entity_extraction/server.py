@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import re
+import string
 import subprocess
 import time
 import uvicorn
@@ -82,14 +83,30 @@ async def entity_extraction(payload: Payload):
     entity_substr, init_entity_offsets, entity_offsets, entity_positions, tags, sentences_offsets, sentences, \
             probas = [[[] for _ in texts] for _ in range(8)]
     try:
-        entity_substr, init_entity_offsets, entity_offsets, entity_positions, tags, sentences_offsets, sentences, \
-            probas = ner(texts)
-    except:
-        logger.info("error in entity detection")
-    
+        raw_entity_substr, raw_init_entity_offsets, raw_entity_offsets, raw_entity_positions, raw_tags, \
+        raw_sentences_offsets, raw_sentences, raw_probas = ner(texts)
+    except Exception as e:
+        logger.info(f"{type(e)} error in entity detection: {e}")
+        raw_entity_substr, raw_init_entity_offsets, raw_entity_offsets, raw_entity_positions, raw_tags, \
+        raw_sentences_offsets, raw_sentences, raw_probas = [[[] for _ in texts] for _ in range(8)]
+
+    for batch_idx, raw_batch in enumerate(raw_entity_substr):
+        for entity_idx, entity in enumerate(raw_batch):
+            stripped_substr = raw_entity_substr[batch_idx][entity_idx].strip()
+            if all(char in string.printable for char in stripped_substr) \
+                    and any(char.isalnum() for char in stripped_substr):
+                entity_substr[batch_idx].append(raw_entity_substr[batch_idx][entity_idx])
+                init_entity_offsets[batch_idx].append(raw_init_entity_offsets[batch_idx][entity_idx])
+                entity_offsets[batch_idx].append(raw_entity_offsets[batch_idx][entity_idx])
+                entity_positions[batch_idx].append(raw_entity_positions[batch_idx][entity_idx])
+                tags[batch_idx].append(raw_tags[batch_idx][entity_idx])
+                sentences_offsets[batch_idx].append(raw_sentences_offsets[batch_idx][entity_idx])
+                sentences[batch_idx].append(raw_sentences[batch_idx][entity_idx])
+                probas[batch_idx].append(raw_probas[batch_idx][entity_idx])
+
     entity_ids, entity_tags, entity_conf, entity_pages, image_links, categories, first_pars, dbpedia_types = \
         [[[] for _ in texts] for _ in range(8)]
-    
+
     if el_config_name == "entity_linking_en.json":
         entity_ids, entity_tags, entity_conf, entity_pages = \
             el(entity_substr, tags, sentences, entity_offsets, sentences_offsets, probas)
@@ -112,8 +129,8 @@ async def entity_extraction(payload: Payload):
                         first_pars[i][j] = [""]
                         categories[i][j] = [[]]
                         dbpedia_types[i][j] = [[]]
-        except:
-            logger.info("error in entity linking")
+        except Exception as e:
+            logger.error(f"{type(e)} error in entity linking: {e}")
 
         entity_info = {"entity_substr": entity_substr, "entity_offsets": entity_offsets, "entity_ids": entity_ids,
                        "entity_tags": entity_tags, "entity_conf": entity_conf, "entity_pages": entity_pages,

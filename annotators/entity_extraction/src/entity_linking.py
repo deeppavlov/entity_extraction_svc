@@ -392,7 +392,7 @@ class EntityLinker(Component, Serializable):
             for n in range(len(entity_substr_list)):
                 init_cand_ent_scores_list.append(init_cand_ent_scores_dict[n])
                 substr_tags_list.append(entity_tags_dict[n])
-                
+
             entities_types_dict = {}
             for entity_substr, tag, cand_ent_scores in zip(entity_substr_list, substr_tags_list, init_cand_ent_scores_list):
                 cand_ent_scores_init = sorted(cand_ent_scores, key=lambda x: (x[1][0], x[1][1]), reverse=True)
