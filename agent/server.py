@@ -158,7 +158,7 @@ class EntityAnnotation(BaseEntityAnnotation):
     categories: List[str]
     image: Optional[dict] = {}
     lod: Optional[dict] = {}
-    dbpedia_types: List
+    types: List
 
     @property
     def has_wikidata(self):
@@ -219,7 +219,7 @@ def unpack_annotation(
             tags=entities.tags(entity_idx),
             image=entities.images(entity_idx, variety_idx),
             lod=entities.lod(entity_idx, variety_idx),
-            dbpedia_types=entities.types(entity_idx, variety_idx)
+            types=entities.types(entity_idx, variety_idx)
         )
     else:
         return BaseEntityAnnotation(
