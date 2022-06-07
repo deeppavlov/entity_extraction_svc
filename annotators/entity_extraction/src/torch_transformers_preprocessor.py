@@ -99,14 +99,17 @@ class TorchTransformersNerPreprocessor(Component):
                 tokens_batch.append(tokens_list)
                 tokens_offsets_batch.append(tokens_offsets_list)
             tokens = tokens_batch
+        new_tokens_batch, new_offsets_batch = [], []
         subword_tokens, subword_tok_ids, startofword_markers, subword_tags = [], [], [], []
         for i in range(len(tokens)):
             toks = tokens[i]
+            offsets = tokens_offsets_batch[i]
             ys = ['O'] * len(toks) if tags is None else tags[i]
             assert len(toks) == len(ys), \
                 f"toks({len(toks)}) should have the same length as ys({len(ys)})"
-            sw_toks, sw_marker, sw_ys = \
+            sw_toks, sw_marker, sw_ys, new_tokens, new_offsets = \
                 self._ner_bert_tokenize(toks,
+                                        offsets,
                                         ys,
                                         self.tokenizer,
                                         self.max_subword_length,
@@ -121,6 +124,8 @@ class TorchTransformersNerPreprocessor(Component):
             subword_tok_ids.append(self.tokenizer.convert_tokens_to_ids(sw_toks))
             startofword_markers.append(sw_marker)
             subword_tags.append(sw_ys)
+            new_tokens_batch.append(new_tokens)
+            new_offsets_batch.append(new_offsets)
             assert len(sw_marker) == len(sw_toks) == len(subword_tok_ids[-1]) == len(sw_ys), \
                 f"length of sow_marker({len(sw_marker)}), tokens({len(sw_toks)})," \
                 f" token ids({len(subword_tok_ids[-1])}) and ys({len(ys)})" \
@@ -149,12 +154,13 @@ class TorchTransformersNerPreprocessor(Component):
                 return tokens, subword_tokens, subword_tok_ids, \
                        attention_mask, startofword_markers, nonmasked_tags
         if self.return_offsets:
-            return tokens, subword_tokens, subword_tok_ids, startofword_markers, attention_mask, tokens_offsets_batch
+            return new_tokens_batch, subword_tokens, subword_tok_ids, startofword_markers, attention_mask, new_offsets_batch
         else:
-            return tokens, subword_tokens, subword_tok_ids, startofword_markers, attention_mask
+            return new_tokens_batch, subword_tokens, subword_tok_ids, startofword_markers, attention_mask
 
     @staticmethod
     def _ner_bert_tokenize(tokens: List[str],
+                           offsets: List[List[int]],
                            tags: List[str],
                            tokenizer: AutoTokenizer,
                            max_subword_len: int = None,
@@ -166,7 +172,9 @@ class TorchTransformersNerPreprocessor(Component):
         tokens_subword = ['[CLS]']
         startofword_markers = [0]
         tags_subword = ['X']
-        for token, tag in zip(tokens, tags):
+        new_tokens, new_offsets = [], []
+        num_subw = 0
+        for token, tag, offset in zip(tokens, tags, offsets):
             token_marker = int(tag != 'X')
             subwords = tokenizer.tokenize(token)
             if not subwords or (do_cutting and (len(subwords) > max_subword_len)):
@@ -183,11 +191,17 @@ class TorchTransformersNerPreprocessor(Component):
                 else:
                     startofword_markers.extend([token_marker] + [0] * (len(subwords) - 1))
                 tags_subword.extend([tag] + ['X'] * (len(subwords) - 1))
+            
+            new_tokens.append(token)
+            new_offsets.append(offset)
+            num_subw += len(subwords)
+            if num_subw >= 500:
+                break
 
         tokens_subword.append('[SEP]')
         startofword_markers.append(0)
         tags_subword.append('X')
-        return tokens_subword, startofword_markers, tags_subword
+        return tokens_subword, startofword_markers, tags_subword, new_tokens, new_offsets
 
 
 @register('split_markups')
