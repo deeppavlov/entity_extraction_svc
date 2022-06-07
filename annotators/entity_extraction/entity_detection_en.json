@@ -26,7 +26,7 @@
       "DOWNLOADS_PATH": "{ROOT_PATH}/downloads",
       "MODELS_PATH": "{ROOT_PATH}/models",
       "CONFIGS_PATH": "{DEEPPAVLOV_PATH}/configs",
-      "TRANSFORMER": "haisongzhang/roberta-tiny-cased",
+      "TRANSFORMER": "{DOWNLOADS_PATH}/torch_bert_models/roberta_tiny_cased",
       "NER_PATH": "{MODELS_PATH}/entity_detection_tinyroberta_42"
     },
     "requirements": [
@@ -37,6 +37,10 @@
       {
         "url": "http://files.deeppavlov.ai/v1/ner/entity_detection_tinyroberta_42.tar.gz",
         "subdir": "{NER_PATH}"
+      },
+      {
+        "url": "http://files.deeppavlov.ai/deeppavlov_data/entity_linking/roberta_tiny_cased.tar.gz",
+        "subdir": "{TRANSFORMER}"
       }
     ]
   }

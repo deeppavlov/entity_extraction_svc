@@ -46,7 +46,7 @@
       "ROOT_PATH": "~/.deeppavlov",
       "DOWNLOADS_PATH": "{ROOT_PATH}/downloads",
       "MODELS_PATH": "{ROOT_PATH}/models",
-      "TRANSFORMER": "prajjwal1/bert-small",
+      "TRANSFORMER": "{DOWNLOADS_PATH}/torch_bert_models/bert_small",
       "CONFIGS_PATH": "{DEEPPAVLOV_PATH}/configs"
     },
     "download": [
@@ -61,6 +61,10 @@
       {
         "url": "http://files.deeppavlov.ai/deeppavlov_data/entity_linking/siamese_distilbert_biencoder.tar.gz",
         "subdir": "{MODELS_PATH}/siamese_distilbert_biencoder"
+      },
+      {
+        "url": "http://files.deeppavlov.ai/deeppavlov_data/entity_linking/bert_small.tar.gz",
+        "subdir": "{TRANSFORMER}"
       }
     ]
   }

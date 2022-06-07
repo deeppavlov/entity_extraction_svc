@@ -76,12 +76,9 @@ class TorchTransformersNerPreprocessor(Component):
         self.max_seq_length = max_seq_length
         self.max_subword_length = max_subword_length
         self.subword_mask_mode = subword_mask_mode
-        if Path(vocab_file).is_file():
-            vocab_file = str(expand_path(vocab_file))
-            self.tokenizer = AutoTokenizer(vocab_file=vocab_file,
-                                           do_lower_case=do_lower_case)
-        else:
-            self.tokenizer = AutoTokenizer.from_pretrained(vocab_file, do_lower_case=do_lower_case)
+        vocab_file = str(expand_path(vocab_file))
+        self.tokenizer = AutoTokenizer.from_pretrained(vocab_file,
+                                                       do_lower_case=do_lower_case)
         self.token_masking_prob = token_masking_prob
         self.return_offsets = return_offsets
 
@@ -369,12 +366,9 @@ class TorchTransformersEntityRankerPreprocessor(Component):
                  **kwargs) -> None:
         self.max_seq_length = max_seq_length
         self.do_lower_case = do_lower_case
-        if Path(vocab_file).is_file():
-            vocab_file = str(expand_path(vocab_file))
-            self.tokenizer = AutoTokenizer(vocab_file=vocab_file,
-                                           do_lower_case=do_lower_case)
-        else:
-            self.tokenizer = AutoTokenizer.from_pretrained(vocab_file, do_lower_case=do_lower_case)
+        vocab_file = str(expand_path(vocab_file))
+        self.tokenizer = AutoTokenizer.from_pretrained(vocab_file,
+                                                       do_lower_case=do_lower_case)
         if special_tokens is not None:
             special_tokens_dict = {'additional_special_tokens': special_tokens}
             self.tokenizer.add_special_tokens(special_tokens_dict)

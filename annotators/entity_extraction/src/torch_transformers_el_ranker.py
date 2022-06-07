@@ -140,7 +140,7 @@ class TorchTransformersEntityRankerInfer:
                  block_size: int = 8,
                  device: str = "gpu", **kwargs):
         self.device = torch.device("cuda" if torch.cuda.is_available() and device == "gpu" else "cpu")
-        self.pretrained_bert = pretrained_bert
+        self.pretrained_bert = str(expand_path(pretrained_bert))
         self.preprocessor = TorchTransformersEntityRankerPreprocessor(vocab_file=self.pretrained_bert,
                                                                       do_lower_case=do_lower_case,
                                                                       special_tokens=["[ent]"])
