@@ -936,7 +936,7 @@ class EntityLinker(Component, Serializable):
     
     def find_exact_match_sqlite(self, entity_substr, tags, rels_dict=None):
         if self.delete_hyphens:
-            for symb in ["'s", " '", " (", " &", ' "', "’s", " ”", " ’"]:
+            for symb in [" s", "'s", " '", " (", " &", ' "', "’s", " ”", " ’"]:
                 if entity_substr.endswith(symb):
                     entity_substr = entity_substr.replace(symb, "")
             for symb in [": "]:
