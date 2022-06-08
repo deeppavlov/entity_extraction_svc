@@ -1068,13 +1068,14 @@ class EntityLinker(Component, Serializable):
         cand_ent_init = defaultdict(set)
         if self.tags_filename and not self.using_custom_db:
             for tag in tags:
+                entities_and_ids = []
                 query_str = self.make_query_str(entity_substr_split)
                 try:
                     if tag.lower() in self.cursors:
                         res = self.cursors[tag.lower()].execute("SELECT * FROM inverted_index WHERE inverted_index MATCH '{}';".format(query_str))
                         entities_and_ids = res.fetchall()
                 except:
-                    entities_and_ids = []
+                    pass
                 log.info(f"query_str {query_str} entity_substr_split {entity_substr_split} {len(entities_and_ids)}")
                 if entities_and_ids:
                     cand_ent_init = self.process_cand_ent(cand_ent_init, entities_and_ids, entity_substr_split, [tag])
