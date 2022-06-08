@@ -13,27 +13,19 @@
 # limitations under the License.
 
 import re
-import time
 from logging import getLogger
 from string import punctuation
-from typing import List, Dict, Tuple, Any
-from collections import defaultdict
+from typing import List, Tuple
 
-import numpy as np
-import pymorphy2
 from bs4 import BeautifulSoup
-from nltk.corpus import stopwords
 from nltk import sent_tokenize
 from transformers import AutoTokenizer
 
 from deeppavlov.core.common.registry import register
 from deeppavlov.core.models.component import Component
 from deeppavlov.core.common.chainer import Chainer
-from deeppavlov.core.models.serializable import Serializable
 from deeppavlov.core.commands.utils import expand_path
-from deeppavlov.core.common.file import load_pickle, save_pickle
 from src.entity_detection_parser import EntityDetectionParser
-from deeppavlov.models.tokenizers.utils import detokenize
 
 log = getLogger(__name__)
 
@@ -75,10 +67,6 @@ class NerChunker(Component):
         """
         text_batch_list, nums_batch_list, sentences_offsets_batch_list, sentences_batch_list = [], [], [], []
         text_batch, nums_batch, sentences_offsets_batch, sentences_batch = [], [], [], []
-        sentences_offsets_list, sentences_list = [], []
-        text = ""
-        cur_len = 0
-        cur_chunk_len = 0
 
         for n, doc in enumerate(docs_batch):
             if self.lowercase:
@@ -114,7 +102,6 @@ class NerChunker(Component):
                 for doc_piece in doc_pieces:
                     sentences += sent_tokenize(doc_piece)
                 for sentence in sentences:
-                    cur_chunk_len = 0
                     sentence_tokens = re.findall(self.re_tokenizer, sentence)
                     sentence_len = sum([len(self.tokenizer.encode_plus(token, add_special_tokens = False)["input_ids"])
                                         for token in sentence_tokens])
@@ -285,7 +272,8 @@ class NerChunkModel(Component):
                         end_offset = ner_tokens_offsets_list[entity_positions[-1]][1]
                         entity_offsets_list.append((start_offset, end_offset))
                 else:
-                    entity_substr_list, entity_offsets_list, entity_positions_list, tags_list, probas_list = [], [], [], [], []
+                    entity_substr_list, entity_offsets_list, entity_positions_list, tags_list, \
+                    probas_list = [], [], [], [], []
                 entity_substr_batch.append(list(entity_substr_list))
                 entity_offsets_batch.append(list(entity_offsets_list))
                 entity_positions_batch.append(list(entity_positions_list))
@@ -369,6 +357,7 @@ class NerChunkModel(Component):
                 for entity_substr, entity_offsets, entity_tag, entity_proba, entity_pos in \
                         zip(entity_substr_list, entity_offsets_list, entity_tags_list, entity_probas_list, entity_pos_list):
                     found = False
+                    fnd = 0
                     for symb, replace_list in [["", []], ["-", [("-", " - "), ("  ", " ")]], [". ", [(". ", ".")]],
                                                ["/", [(" / ", "/")]], [" ", [(" (", "(")]], [" ’", [(" ’", "’")]]]:
                         if symb in entity_substr:
