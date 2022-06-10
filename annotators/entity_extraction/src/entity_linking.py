@@ -30,6 +30,7 @@ from deeppavlov.core.models.serializable import Serializable
 from deeppavlov.core.commands.utils import expand_path
 from deeppavlov.core.common.file import load_pickle, save_pickle
 from src.torch_transformers_el_ranker import TorchTransformersEntityRankerInfer
+from src.queries import add_entity_query, create_table_query, insert_entity_query, inv_index_query, add_info_query
 
 log = getLogger(__name__)
 
@@ -193,10 +194,8 @@ class EntityLinker(Component, Serializable):
             p641_obj = ""
         if triplets_str is None:
             triplets_str = ""
-        query = '''INSERT INTO inverted_index ''' + \
-                '''VALUES ('{}', '{}', {}, '{}', '{}', '{}', '{}', '{}', '{}')'''.format(entity_label,
-                    entity, num_rels, tag, page, types_str, p131_obj, p641_obj, triplets_str)
-        self.cur.execute(query)
+        self.cur.execute(add_entity_query, (entity_label, entity, num_rels, tag, page, types_str, p131_obj,
+                                            p641_obj, triplets_str))
         self.conn.commit()
     
     def parse_custom_database(self, elements_list, label_relation, type_relation, type_to_tag_dict):
@@ -212,10 +211,7 @@ class EntityLinker(Component, Serializable):
         log.info(f"db_path {db_path} label_relation {label_relation} type_relation {type_relation}")
         self.conn = sqlite3.connect(str(self.load_path / f"custom_database{i}.db"), check_same_thread=False)
         self.cur = self.conn.cursor()
-        query = "CREATE VIRTUAL TABLE IF NOT EXISTS inverted_index USING fts5(title, entity_id, num_rels " + \
-                "UNINDEXED, tag, page, descr, entity_title, name_or_alias, p31, p131, p641, triplets UNINDEXED, " + \
-                "tokenize = 'porter ascii');"
-        self.cur.execute(query)
+        self.cur.execute(create_table_query)
         labels_dict = {}
         triplets_dict = {}
         types_dict = {}
@@ -265,10 +261,8 @@ class EntityLinker(Component, Serializable):
                 tag = type_to_tag_dict[types[0]]
             
             for entity_label in labels:
-                query = '''INSERT INTO inverted_index ''' + \
-                    '''VALUES ('{}', '{}', {}, '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}')'''.format(entity_label.lower(),
-                        entity, num_rels, tag, "", "", "", "", types_str, "", "", triplets_str)
-                self.cur.execute(query)
+                self.cur.execute(insert_entity_query, (entity_label.lower(), entity, num_rels, tag, "", "", "", "",
+                                                       types_str, "", "", triplets_str))
         self.conn.commit()
 
     def __call__(self, entity_substr_batch: List[List[str]],
@@ -976,8 +970,7 @@ class EntityLinker(Component, Serializable):
                     log.info(f"query_str {query_str} entity_substr {entity_substr}")
                     if tag.lower() in self.cursors:
                         log.info(f"tag {tag}")
-                        query = "SELECT * FROM inverted_index WHERE inverted_index MATCH '{}';".format(query_str)
-                        res = self.cursors[tag.lower()].execute(query)
+                        res = self.cursors[tag.lower()].execute(inv_index_query, (query_str,))
                         entities_and_ids = res.fetchall()
                         if entities_and_ids:
                             cand_ent_init = self.process_cand_ent(cand_ent_init, entities_and_ids,
@@ -985,8 +978,7 @@ class EntityLinker(Component, Serializable):
             else:
                 query_str = self.make_query_str(entity_substr, tags, rels_dict)
                 log.info(f"query_str {query_str} entity_substr {entity_substr}")
-                query = "SELECT * FROM inverted_index WHERE inverted_index MATCH '{}';".format(query_str)
-                res = self.cur.execute(query)
+                res = self.cur.execute(inv_index_query, (query_str,))
                 entities_and_ids = res.fetchall()
                 if entities_and_ids:
                     cand_ent_init = self.process_cand_ent(cand_ent_init, entities_and_ids, entity_substr_split, tags)
@@ -997,8 +989,7 @@ class EntityLinker(Component, Serializable):
                     query_str = self.make_query_str(entity_substr)
                     log.info(f"query_str {query_str} entity_substr {entity_substr}")
                     if tag.lower() in self.cursors:
-                        query = "SELECT * FROM inverted_index WHERE inverted_index MATCH '{}';".format(query_str)
-                        res = self.cursors[tag.lower()].execute(query)
+                        res = self.cursors[tag.lower()].execute(inv_index_query, (query_str,))
                         entities_and_ids = res.fetchall()
                         if entities_and_ids:
                             cand_ent_init = self.process_cand_ent(cand_ent_init, entities_and_ids,
@@ -1006,8 +997,7 @@ class EntityLinker(Component, Serializable):
             else:
                 query_str = self.make_query_str(entity_substr, tags)
                 log.info(f"query_str {query_str} entity_substr {entity_substr}")
-                query = "SELECT * FROM inverted_index WHERE inverted_index MATCH '{}';".format(query_str)
-                res = self.cur.execute(query)
+                res = self.cur.execute(inv_index_query, (query_str,))
                 entities_and_ids = res.fetchall()
                 if entities_and_ids:
                     cand_ent_init = self.process_cand_ent(cand_ent_init, entities_and_ids, entity_substr_split, tags)
@@ -1075,7 +1065,7 @@ class EntityLinker(Component, Serializable):
             else:
                 query_str = f"page:{page} AND {tags_str}"
             
-            res = self.cur.execute("SELECT * FROM inverted_index WHERE inverted_index MATCH '{}';".format(query_str))
+            res = self.cur.execute(inv_index_query, (query_str,))
             entities_and_ids = res.fetchall()
             cand_ent_init = self.process_cand_ent(cand_ent_init, entities_and_ids, entity_substr_split, tags)
         
@@ -1088,8 +1078,7 @@ class EntityLinker(Component, Serializable):
                     query_str = f"page:{page} AND entity_id:{entity_id}"
                 else:
                     query_str = f"page:{page}"
-                query = "SELECT * FROM inverted_index WHERE inverted_index MATCH '{}';".format(query_str)
-                res = self.cur.execute(query)
+                res = self.cur.execute(inv_index_query, (query_str,))
                 entities_and_ids = res.fetchall()
                 cand_ent_init = self.process_cand_ent(cand_ent_init, entities_and_ids, entity_substr_split, tags)
             
@@ -1494,11 +1483,9 @@ class EntityLinker(Component, Serializable):
                 images_links, categories, first_pars, dbpedia_types = [], [], [], []
                 for entity_id in entity_ids:
                     if self.add_info_filename:
-                        query = "SELECT * FROM entity_additional_info WHERE entity_id='{}';".format(entity_id)
-                        res = self.add_info_cur.execute(query)
+                        res = self.add_info_cur.execute(add_info_query, (entity_id,))
                     else:
-                        query = "SELECT * FROM entity_additional_info WHERE entity_id='{}';".format(entity_id)
-                        res = self.cur.execute(query)
+                        res = self.cur.execute(add_info_query, (entity_id,))
                     entity_info = res.fetchall()
                     if entity_info:
                         images_links.append(entity_info[0][1])
