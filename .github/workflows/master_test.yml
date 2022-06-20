@@ -34,4 +34,9 @@ jobs:
           --retry-delay 10 \
           --retry-max-time 120 \
           --retry-connrefused \
-          http://localhost:9999/
+          --request POST \
+          --url http://localhost:9999/ \
+          --header 'Content-Type: application/json' \
+          --data '{
+            "text": "The Mona Lisa is a sixteenth century oil painting created by Leonardo. It'\''s held at the Louvre in Paris."
+          }'
