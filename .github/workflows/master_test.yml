@@ -11,6 +11,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      - name: 'Create env file'
+        run: |
+          touch .env
+          echo AGENT_URL=http://localhost:9999/ >> .env
+          echo ENTITY_EXTRACTION_URL=http://localhost:9103/entity_extraction >> .env
+          echo ENTITY_DETECTION_URL=http://localhost:9103/model >> .env
+          echo ENTITY_LINKING_URL=http://localhost:9075/model >> .env
+          echo WIKI_PARSER_URL=http://localhost:9077/model >> .env
+          cat .env
       - name: Build the stack
         run: docker-compose up -d
       - name: Test
