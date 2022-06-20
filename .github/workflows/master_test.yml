@@ -21,7 +21,7 @@ jobs:
           echo WIKI_PARSER_URL=http://localhost:9077/model >> .env
           cat .env
       - name: Build
-        run: docker-compose up
+        run: docker-compose up -d
       - name: Test
         run: |
           docker run --network container:entity_extraction_svc_agent_1 appropriate/curl \
@@ -29,9 +29,8 @@ jobs:
             --verbose \
             --connect-timeout 10 \
             --max-time 10 \
-            --retry 10 \
-            --retry-delay 30 \
-            --retry-max-time 120 \
+            --retry 30 \
+            --retry-delay 20 \
             --retry-connrefused \
             --url http://localhost:9999/ \
             --header 'Content-Type: application/json' \
