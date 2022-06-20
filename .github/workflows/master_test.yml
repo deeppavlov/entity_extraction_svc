@@ -2,9 +2,9 @@ name: Full API Test
 
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "feat/workflows" ]
   pull_request:
-    branches: [ "master" ]
+    branches: [ "feat/workflows" ]
 
 jobs:
   test:
@@ -20,10 +20,8 @@ jobs:
           echo ENTITY_LINKING_URL=http://localhost:9075/model >> .env
           echo WIKI_PARSER_URL=http://localhost:9077/model >> .env
           cat .env
-      - name: Build the stack
-        run: docker-compose up -d
-      - name: Collect Docker Logs
-        uses: jwalton/gh-docker-logs@v2.2.0
+      - name: Build
+        run: docker-compose up
       - name: Test
         run: |
           docker run --network container:entity_extraction_svc_agent_1 appropriate/curl \
@@ -32,12 +30,14 @@ jobs:
             --connect-timeout 10 \
             --max-time 10 \
             --retry 10 \
-            --retry-delay 10 \
+            --retry-delay 30 \
             --retry-max-time 120 \
             --retry-connrefused \
-            --request POST \
             --url http://localhost:9999/ \
             --header 'Content-Type: application/json' \
             --data '{
               "text": "The Mona Lisa is a sixteenth century oil painting created by Leonardo. It'\''s held at the Louvre in Paris."
             }'
+      - name: Dump docker logs on failure
+        if: failure()
+        uses: jwalton/gh-docker-logs@v2.2.0
