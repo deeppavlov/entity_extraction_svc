@@ -35,8 +35,10 @@ jobs:
             --url http://localhost:9999/ \
             --header 'Content-Type: application/json' \
             --data '{
-              "text": "The Mona Lisa is a sixteenth century oil painting created by Leonardo. It'\''s held at the Louvre in Paris."
+              "text": "The Mona Lisa is a sixteenth century oil painting created by Leonardo. It is held at the Louvre in Paris."
             }'
-      - name: Dump docker logs on failure
+      - name: Docker logs dump on failure
         if: failure()
+        uses: jwalton/gh-docker-logs@v2.2.0
+      - name: Final docker logs dump
         uses: jwalton/gh-docker-logs@v2.2.0
