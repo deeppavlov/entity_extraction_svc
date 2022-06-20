@@ -22,16 +22,16 @@ jobs:
           cat .env
       - name: Build the stack
         run: docker-compose up -d
-      - name: Wait Docker-Compose
-        # You may pin to the exact commit or the version.
-        # uses: thegabriele97/dockercompose-health-action@f09b093cb0b4235770a5525d6ab3487dc5d203f2
-        uses: thegabriele97/dockercompose-health-action@v1.0
-        with:
-          # After timeout seconds, the wait process fails returning Status Code 1
-          timeout: '120'
-          # The directory where your docker-compose.yml is
-          workdir: '.'
       - name: Collect Docker Logs
         uses: jwalton/gh-docker-logs@v2.2.0
       - name: Test
-        run: docker run --network container:entity_extraction_svc_agent_1 appropriate/curl --verbose -s --retry 10 --retry-connrefused http://localhost:9999/
+        run: docker run --network container:entity_extraction_svc_agent_1 appropriate/curl \
+          -4 \
+          --verbose \
+          --connect-timeout 10 \
+          --max-time 10 \
+          --retry 10 \
+          --retry-delay 10 \
+          --retry-max-time 120 \
+          --retry-connrefused \
+          http://localhost:9999/
