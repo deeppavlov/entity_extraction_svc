@@ -1,22 +1,15 @@
-import os
-print(os.environ["PYTHONPATH"])
-
-
 import logging
 from datetime import datetime
 from typing import List, Union, Optional
 
 import requests
 from fastapi import FastAPI
-from pydantic import BaseModel, BaseSettings
+from pydantic import BaseModel
 from starlette.middleware.cors import CORSMiddleware
 
 from agent.config import ServerSettings
 from agent.constants import (
-    TAG_TO_TYPE_MAP,
-    TAG_TO_TYPE_LIST_MAP,
     WIKIPEDIA_PAGE_URI_PREFIX,
-    ONTOLOGY_URI_PREFIX,
     WIKIPEDIA_FILE_URI_PREFIX,
 )
 
@@ -57,6 +50,7 @@ class EntityExtractionServiceResponse(BaseModel):
     image_links: List[List[List[str]]]
     categories: List[List[List[List[str]]]]
     first_paragraphs: List[List[List[str]]]
+    dbpedia_types: List[List[List[List[str]]]]
 
     def count_entities(self):
         """Counts number of entities in entity-extraction response
@@ -88,24 +82,8 @@ class EntityExtractionServiceResponse(BaseModel):
     def tags(self, idx):
         return self.entity_tags[0][idx]
 
-    def types(self, idx):
-        types_list = []
-        tags = self.tags(idx)
-
-        if len(tags) > 0:
-            # we use only the primary tag because it corresponds to the best match
-            primary_tag = tags[0]
-
-            try:
-                adv_types = TAG_TO_TYPE_LIST_MAP[primary_tag]
-                for adv_type in adv_types:
-                    dbpedia_type = f"{ONTOLOGY_URI_PREFIX}/{adv_type}"
-                    if dbpedia_type not in types_list:
-                        types_list.append(dbpedia_type)
-            except KeyError:
-                pass
-
-        return types_list
+    def types(self, idx, variety_idx):
+        return self.dbpedia_types[0][idx][variety_idx]
 
     def id(self, idx, variety_idx):
         return self.entity_ids[0][idx][variety_idx]
@@ -164,7 +142,6 @@ class BaseEntityAnnotation(BaseModel):
     end: int
     spot: str
     tags: List[str]
-    types: List[str]
 
     @property
     def has_wikidata(self):
@@ -181,6 +158,7 @@ class EntityAnnotation(BaseEntityAnnotation):
     categories: List[str]
     image: Optional[dict] = {}
     lod: Optional[dict] = {}
+    types: List
 
     @property
     def has_wikidata(self):
@@ -239,9 +217,9 @@ def unpack_annotation(
             label=entities.page(entity_idx, variety_idx),
             categories=entities.category(entity_idx, variety_idx),
             tags=entities.tags(entity_idx),
-            types=entities.types(entity_idx),
             image=entities.images(entity_idx, variety_idx),
             lod=entities.lod(entity_idx, variety_idx),
+            types=entities.types(entity_idx, variety_idx)
         )
     else:
         return BaseEntityAnnotation(
@@ -249,7 +227,6 @@ def unpack_annotation(
             end=end_offset,
             spot=entities.substr(entity_idx),
             tags=entities.tags(entity_idx),
-            types=entities.types(entity_idx),
         )
 
 

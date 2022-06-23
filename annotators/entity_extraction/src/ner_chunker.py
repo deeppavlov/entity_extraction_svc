@@ -13,26 +13,19 @@
 # limitations under the License.
 
 import re
-import time
 from logging import getLogger
 from string import punctuation
-from typing import List, Dict, Tuple, Any
-from collections import defaultdict
+from typing import List, Tuple
 
-import numpy as np
-import pymorphy2
-from nltk.corpus import stopwords
+from bs4 import BeautifulSoup
 from nltk import sent_tokenize
 from transformers import AutoTokenizer
 
 from deeppavlov.core.common.registry import register
 from deeppavlov.core.models.component import Component
 from deeppavlov.core.common.chainer import Chainer
-from deeppavlov.core.models.serializable import Serializable
 from deeppavlov.core.commands.utils import expand_path
-from deeppavlov.core.common.file import load_pickle, save_pickle
 from src.entity_detection_parser import EntityDetectionParser
-from deeppavlov.models.tokenizers.utils import detokenize
 
 log = getLogger(__name__)
 
@@ -55,6 +48,7 @@ class NerChunker(Component):
         self.max_chunk_len = max_chunk_len
         self.batch_size = batch_size
         self.re_tokenizer = re.compile(r"[\w']+|[^\w ]")
+        vocab_file = str(expand_path(vocab_file))
         self.tokenizer = AutoTokenizer.from_pretrained(vocab_file,
                                        do_lower_case=True)
         self.punct_ext = punctuation + " " + "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -73,14 +67,28 @@ class NerChunker(Component):
         """
         text_batch_list, nums_batch_list, sentences_offsets_batch_list, sentences_batch_list = [], [], [], []
         text_batch, nums_batch, sentences_offsets_batch, sentences_batch = [], [], [], []
-        sentences_offsets_list, sentences_list = [], []
-        text = ""
-        cur_len = 0
-        cur_chunk_len = 0
 
         for n, doc in enumerate(docs_batch):
             if self.lowercase:
                 doc = doc.lower()
+            for old_symb, new_symb in [("’", "'"), ("”", '"'), ("â€™", "'"), ("â€œ", '"'), ("â€\x9d", '"')]:
+                doc = doc.replace(old_symb, new_symb)
+            if "<!DOCTYPE html>" in doc:
+                try:
+                    soup = BeautifulSoup(doc, "html.parser")
+                    doc = soup.get_text()
+                    doc = re.sub(r'\s+', ' ', doc)
+                except:
+                    pass
+            elif "?xml version" in doc:
+                try:
+                    soup = BeautifulSoup(doc, "lxml")
+                    doc = soup.get_text()
+                    doc = re.sub(r'\s+', ' ', doc)
+                except:
+                    pass
+            elif "<" in doc:
+                doc = re.sub('<[^<]+>', "", doc).strip()
             start = 0
             text = ""
             sentences_list = []
@@ -94,7 +102,6 @@ class NerChunker(Component):
                 for doc_piece in doc_pieces:
                     sentences += sent_tokenize(doc_piece)
                 for sentence in sentences:
-                    cur_chunk_len = 0
                     sentence_tokens = re.findall(self.re_tokenizer, sentence)
                     sentence_len = sum([len(self.tokenizer.encode_plus(token, add_special_tokens = False)["input_ids"])
                                         for token in sentence_tokens])
@@ -208,7 +215,8 @@ class NerChunkModel(Component):
         self.ner = ner
         self.ner_parser = ner_parser
 
-    def __call__(self, text_batch_list: List[List[str]],
+    def __call__(self, text_raw_batch: List[str],
+                 text_batch_list: List[List[str]],
                  nums_batch_list: List[List[int]],
                  sentences_offsets_batch_list: List[List[List[Tuple[int, int]]]],
                  sentences_batch_list: List[List[List[str]]]
@@ -264,7 +272,8 @@ class NerChunkModel(Component):
                         end_offset = ner_tokens_offsets_list[entity_positions[-1]][1]
                         entity_offsets_list.append((start_offset, end_offset))
                 else:
-                    entity_substr_list, entity_offsets_list, entity_positions_list, tags_list, probas_list = [], [], [], [], []
+                    entity_substr_list, entity_offsets_list, entity_positions_list, tags_list, \
+                    probas_list = [], [], [], [], []
                 entity_substr_batch.append(list(entity_substr_list))
                 entity_offsets_batch.append(list(entity_offsets_list))
                 entity_positions_batch.append(list(entity_positions_list))
@@ -332,6 +341,55 @@ class NerChunkModel(Component):
         doc_entity_positions_batch.append(doc_entity_positions)
         doc_sentences_offsets_batch.append(doc_sentences_offsets)
         doc_sentences_batch.append(doc_sentences)
+        
+        corr_offsets_batch, init_offsets_batch, corr_substr_batch, corr_tags_batch, \
+            corr_probas_batch, corr_pos_batch = [], [], [], [], [], []
+        for text_raw, doc_sentences, entity_substr_list, entity_offsets_list, entity_tags_list, entity_probas_list, \
+                entity_pos_list in zip(text_raw_batch, doc_sentences_batch, doc_entity_substr_batch,
+                                       doc_entity_offsets_batch, doc_tags_batch, doc_probas_batch,
+                                       doc_entity_positions_batch):
+            text_clean = " ".join(doc_sentences)
+            if len(text_clean) != len(text_raw):
+                corr_substr_list, corr_offsets_list, init_offsets_list, corr_tags_list, corr_probas_list, \
+                    corr_pos_list = [], [], [], [], [], []
+                new_text = text_raw.lower()
+                pos_sum = 0
+                for entity_substr, entity_offsets, entity_tag, entity_proba, entity_pos in \
+                        zip(entity_substr_list, entity_offsets_list, entity_tags_list, entity_probas_list, entity_pos_list):
+                    found = False
+                    fnd = 0
+                    for symb, replace_list in [["", []], ["-", [("-", " - "), ("  ", " ")]], [". ", [(". ", ".")]],
+                                               ["/", [(" / ", "/")]], [" ", [(" (", "(")]], [" ’", [(" ’", "’")]]]:
+                        if symb in entity_substr:
+                            for old_symb, new_symb in replace_list:
+                                entity_substr = entity_substr.replace(old_symb, new_symb)
+                            fnd = new_text.find(entity_substr.lower())
+                            if fnd != -1:
+                                found = True
+                                break
+                    if found:
+                        corr_offsets_list.append([pos_sum + fnd, pos_sum + fnd + len(entity_substr)])
+                        init_offsets_list.append(entity_offsets)
+                        corr_substr_list.append(entity_substr)
+                        corr_tags_list.append(entity_tag)
+                        corr_probas_list.append(entity_proba)
+                        corr_pos_list.append(entity_pos)
+                        new_text = new_text[fnd + len(entity_substr):]
+                        pos_sum = pos_sum + fnd + len(entity_substr)
+                
+                corr_offsets_batch.append(corr_offsets_list)
+                init_offsets_batch.append(init_offsets_list)
+                corr_substr_batch.append(corr_substr_list)
+                corr_tags_batch.append(corr_tags_list)
+                corr_probas_batch.append(corr_probas_list)
+                corr_pos_batch.append(corr_pos_list)
+            else:
+                corr_offsets_batch.append(entity_offsets_list)
+                init_offsets_batch.append(entity_offsets_list)
+                corr_substr_batch.append(entity_substr_list)
+                corr_tags_batch.append(entity_tags_list)
+                corr_probas_batch.append(entity_probas_list)
+                corr_pos_batch.append(entity_pos_list)
 
-        return doc_entity_substr_batch, doc_entity_offsets_batch, doc_entity_positions_batch, doc_tags_batch, \
-               doc_sentences_offsets_batch, doc_sentences_batch, doc_probas_batch
+        return corr_substr_batch, init_offsets_batch, corr_offsets_batch, corr_pos_batch, \
+               corr_tags_batch, doc_sentences_offsets_batch, doc_sentences_batch, corr_probas_batch

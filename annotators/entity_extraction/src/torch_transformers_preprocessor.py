@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from logging import getLogger
 from pathlib import Path
 import torch
-from typing import Tuple, List, Optional, Union, Dict, Set
+from typing import Tuple, List, Optional, Union, Dict, Set, Any
 
 import numpy as np
 from nltk.corpus import stopwords
@@ -76,12 +76,9 @@ class TorchTransformersNerPreprocessor(Component):
         self.max_seq_length = max_seq_length
         self.max_subword_length = max_subword_length
         self.subword_mask_mode = subword_mask_mode
-        if Path(vocab_file).is_file():
-            vocab_file = str(expand_path(vocab_file))
-            self.tokenizer = AutoTokenizer(vocab_file=vocab_file,
-                                           do_lower_case=do_lower_case)
-        else:
-            self.tokenizer = AutoTokenizer.from_pretrained(vocab_file, do_lower_case=do_lower_case)
+        vocab_file = str(expand_path(vocab_file))
+        self.tokenizer = AutoTokenizer.from_pretrained(vocab_file,
+                                                       do_lower_case=do_lower_case)
         self.token_masking_prob = token_masking_prob
         self.return_offsets = return_offsets
 
@@ -102,14 +99,17 @@ class TorchTransformersNerPreprocessor(Component):
                 tokens_batch.append(tokens_list)
                 tokens_offsets_batch.append(tokens_offsets_list)
             tokens = tokens_batch
+        new_tokens_batch, new_offsets_batch = [], []
         subword_tokens, subword_tok_ids, startofword_markers, subword_tags = [], [], [], []
         for i in range(len(tokens)):
             toks = tokens[i]
+            offsets = tokens_offsets_batch[i]
             ys = ['O'] * len(toks) if tags is None else tags[i]
             assert len(toks) == len(ys), \
                 f"toks({len(toks)}) should have the same length as ys({len(ys)})"
-            sw_toks, sw_marker, sw_ys = \
+            sw_toks, sw_marker, sw_ys, new_tokens, new_offsets = \
                 self._ner_bert_tokenize(toks,
+                                        offsets,
                                         ys,
                                         self.tokenizer,
                                         self.max_subword_length,
@@ -124,6 +124,8 @@ class TorchTransformersNerPreprocessor(Component):
             subword_tok_ids.append(self.tokenizer.convert_tokens_to_ids(sw_toks))
             startofword_markers.append(sw_marker)
             subword_tags.append(sw_ys)
+            new_tokens_batch.append(new_tokens)
+            new_offsets_batch.append(new_offsets)
             assert len(sw_marker) == len(sw_toks) == len(subword_tok_ids[-1]) == len(sw_ys), \
                 f"length of sow_marker({len(sw_marker)}), tokens({len(sw_toks)})," \
                 f" token ids({len(subword_tok_ids[-1])}) and ys({len(ys)})" \
@@ -152,12 +154,13 @@ class TorchTransformersNerPreprocessor(Component):
                 return tokens, subword_tokens, subword_tok_ids, \
                        attention_mask, startofword_markers, nonmasked_tags
         if self.return_offsets:
-            return tokens, subword_tokens, subword_tok_ids, startofword_markers, attention_mask, tokens_offsets_batch
+            return new_tokens_batch, subword_tokens, subword_tok_ids, startofword_markers, attention_mask, new_offsets_batch
         else:
-            return tokens, subword_tokens, subword_tok_ids, startofword_markers, attention_mask
+            return new_tokens_batch, subword_tokens, subword_tok_ids, startofword_markers, attention_mask
 
     @staticmethod
     def _ner_bert_tokenize(tokens: List[str],
+                           offsets: List[List[int]],
                            tags: List[str],
                            tokenizer: AutoTokenizer,
                            max_subword_len: int = None,
@@ -169,7 +172,9 @@ class TorchTransformersNerPreprocessor(Component):
         tokens_subword = ['[CLS]']
         startofword_markers = [0]
         tags_subword = ['X']
-        for token, tag in zip(tokens, tags):
+        new_tokens, new_offsets = [], []
+        num_subw = 0
+        for token, tag, offset in zip(tokens, tags, offsets):
             token_marker = int(tag != 'X')
             subwords = tokenizer.tokenize(token)
             if not subwords or (do_cutting and (len(subwords) > max_subword_len)):
@@ -186,11 +191,17 @@ class TorchTransformersNerPreprocessor(Component):
                 else:
                     startofword_markers.extend([token_marker] + [0] * (len(subwords) - 1))
                 tags_subword.extend([tag] + ['X'] * (len(subwords) - 1))
+            
+            new_tokens.append(token)
+            new_offsets.append(offset)
+            num_subw += len(subwords)
+            if num_subw >= 500:
+                break
 
         tokens_subword.append('[SEP]')
         startofword_markers.append(0)
         tags_subword.append('X')
-        return tokens_subword, startofword_markers, tags_subword
+        return tokens_subword, startofword_markers, tags_subword, new_tokens, new_offsets
 
 
 @register('split_markups')
@@ -294,7 +305,7 @@ class MergeMarkups:
                             else:
                                 y_list.append(f"B-{label}")
                             new_entity = " ".join(tokens_list[i:i + num_words])
-                            if new_entity not in self.stopwords:
+                            if new_entity.lower() not in self.stopwords:
                                 entities_list.append(new_entity)
                                 entity_positions_list.append(list(range(i, i + num_words)))
                                 if self.top_n == 1:
@@ -344,3 +355,84 @@ class MergeMarkups:
             entity_tags_batch.append(entity_tags_list)
             entity_probas_batch.append(entity_probas_list)
         return y_batch, entities_batch, entity_positions_batch, entity_tags_batch, entity_probas_batch
+
+
+@register('torch_transformers_entity_ranker_preprocessor')
+class TorchTransformersEntityRankerPreprocessor(Component):
+    """Class for tokenization of text into subtokens, encoding of subtokens with indices and obtaining positions of
+    special [ENT]-tokens
+    Args:
+        vocab_file: path to vocabulary
+        do_lower_case: set True if lowercasing is needed
+        max_seq_length: max sequence length in subtokens, including [SEP] and [CLS] tokens
+        special_tokens: list of special tokens
+        special_token_id: id of special token
+        return_special_tokens_pos: whether to return positions of found special tokens
+    """
+
+    def __init__(self,
+                 vocab_file: str,
+                 do_lower_case: bool = False,
+                 max_seq_length: int = 512,
+                 special_tokens: List[str] = None,
+                 special_token_id: int = None,
+                 return_special_tokens_pos: bool = False,
+                 **kwargs) -> None:
+        self.max_seq_length = max_seq_length
+        self.do_lower_case = do_lower_case
+        vocab_file = str(expand_path(vocab_file))
+        self.tokenizer = AutoTokenizer.from_pretrained(vocab_file,
+                                                       do_lower_case=do_lower_case)
+        if special_tokens is not None:
+            special_tokens_dict = {'additional_special_tokens': special_tokens}
+            self.tokenizer.add_special_tokens(special_tokens_dict)
+        self.special_token_id = special_token_id
+        self.return_special_tokens_pos = return_special_tokens_pos
+
+    def __call__(self, texts_a: List[str]) -> Tuple[Any, List[int]]:
+        """Tokenize and find special tokens positions.
+        Args:
+            texts_a: list of texts,
+        Returns:
+            batch of :class:`transformers.data.processors.utils.InputFeatures` with subtokens, subtoken ids, \
+                subtoken mask, segment mask, or tuple of batch of InputFeatures and Batch of subtokens
+            batch of indices of special token ids in input ids sequence
+        """
+        # in case of iterator's strange behaviour
+        if isinstance(texts_a, tuple):
+            texts_a = list(texts_a)
+        if self.do_lower_case:
+            texts_a = [text.lower() for text in texts_a]
+        texts_a = [text.replace("[ENT]", "[ent]") for text in texts_a]
+        lengths = []
+        input_ids_batch = []
+        for text_a in texts_a:
+            encoding = self.tokenizer.encode_plus(
+                text_a, add_special_tokens=True, pad_to_max_length=True, return_attention_mask=True)
+            input_ids = encoding["input_ids"]
+            input_ids_batch.append(input_ids)
+            lengths.append(len(input_ids))
+
+        max_length = min(max(lengths), self.max_seq_length)
+        input_features = self.tokenizer(text=texts_a,
+                                        add_special_tokens=True,
+                                        max_length=max_length,
+                                        padding='max_length',
+                                        return_attention_mask=True,
+                                        truncation=True,
+                                        return_tensors='pt')
+        special_tokens_pos = []
+        for input_ids_list in input_ids_batch:
+            found_n = -1
+            for n, input_id in enumerate(input_ids_list):
+                if input_id == self.special_token_id:
+                    found_n = n
+                    break
+            if found_n == -1:
+                found_n = 0
+            special_tokens_pos.append(found_n)
+
+        if self.return_special_tokens_pos:
+            return input_features, special_tokens_pos
+        else:
+            return input_features

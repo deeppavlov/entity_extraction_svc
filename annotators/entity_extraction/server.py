@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import re
+import string
 import subprocess
 import time
 import uvicorn
@@ -16,7 +17,8 @@ from deeppavlov import build_model
 from deeppavlov.core.commands.utils import parse_config
 from train import evaluate, ner_config, metrics_filename, LOCKFILE, LOG_PATH
 
-logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
+
+logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
@@ -32,12 +34,14 @@ app.add_middleware(
 ner_config_name = os.getenv("NER_CONFIG")
 el_config_name = os.getenv("EL_CONFIG")
 include_misc = bool(int(os.getenv("INCLUDE_MISC", "0")))
+misc_thres = float(os.getenv("MISC_THRES", "0.88"))
 
 ner_config = parse_config(ner_config_name)
 entity_detection_config_name = ner_config['chainer']['pipe'][1]['ner']['config_path']
 entity_detection = json.load(open(entity_detection_config_name, 'r'))
 entity_detection["chainer"]["pipe"][6]["include_misc"] = include_misc
-json.dump(entity_detection, open(entity_detection_config_name, 'w'))
+entity_detection["chainer"]["pipe"][6]["misc_thres"] = misc_thres
+json.dump(entity_detection, open(entity_detection_config_name, 'w'), indent=2)
 
 logger.info(f"ner_config {ner_config['chainer']['pipe'][1]['ner']}")
 
@@ -76,17 +80,49 @@ async def entity_extraction(payload: Payload):
     st_time = time.time()
     texts = payload.texts
     texts = add_stop_signs(texts)
-    texts = [text.replace("’", "'") for text in texts]
     entity_info = {}
+    entity_substr, init_entity_offsets, entity_offsets, entity_positions, tags, sentences_offsets, sentences, \
+            probas = [[[] for _ in texts] for _ in range(8)]
     try:
-        entity_substr, entity_offsets, entity_positions, tags, sentences_offsets, sentences, probas = ner(texts)
-        if el_config_name == "entity_linking_en.json":
-            entity_ids, entity_tags, entity_conf, entity_pages = \
-                el(entity_substr, tags, sentences, entity_offsets, sentences_offsets, probas)
-            entity_info = {"entity_substr": entity_substr, "entity_offsets": entity_offsets, "entity_ids": entity_ids,
-                           "entity_tags": entity_tags, "entity_conf": entity_conf, "entity_pages": entity_pages}
-        elif el_config_name == "entity_linking_en_full.json":
-            entity_ids, entity_tags, entity_conf, entity_pages, image_links, categories, first_pars = \
+        raw_entity_substr, raw_init_entity_offsets, raw_entity_offsets, raw_entity_positions, raw_tags, \
+            sentences_offsets, sentences, raw_probas = ner(texts)
+    except Exception as e:
+        logger.info(f"{type(e)} error in entity detection: {e}")
+        raw_entity_substr, raw_init_entity_offsets, raw_entity_offsets, raw_entity_positions, raw_tags, \
+            sentences_offsets, sentences, raw_probas = [[[] for _ in texts] for _ in range(8)]
+
+    logger.debug(f"NER raw_entity_substr {raw_entity_substr}")
+    logger.debug(f"NER raw_init_entity_offsets {raw_init_entity_offsets}")
+    logger.debug(f"NER raw_entity_offsets {raw_entity_offsets}")
+    logger.debug(f"NER raw_entity_positions {raw_entity_positions}")
+    logger.debug(f"NER raw_tags {raw_tags}")
+    logger.debug(f"NER sentences_offsets {sentences_offsets}")
+    logger.debug(f"NER sentences {sentences}")
+    logger.debug(f"NER raw_probas {raw_probas}")
+
+    for batch_idx, raw_batch in enumerate(raw_entity_substr):
+        for entity_idx, entity in enumerate(raw_batch):
+            stripped_substr = raw_entity_substr[batch_idx][entity_idx].strip()
+            if all(char in string.printable for char in stripped_substr) \
+                    and any(char.isalnum() for char in stripped_substr):
+                entity_substr[batch_idx].append(raw_entity_substr[batch_idx][entity_idx])
+                init_entity_offsets[batch_idx].append(raw_init_entity_offsets[batch_idx][entity_idx])
+                entity_offsets[batch_idx].append(raw_entity_offsets[batch_idx][entity_idx])
+                entity_positions[batch_idx].append(raw_entity_positions[batch_idx][entity_idx])
+                tags[batch_idx].append(raw_tags[batch_idx][entity_idx])
+                probas[batch_idx].append(raw_probas[batch_idx][entity_idx])
+
+    entity_ids, entity_tags, entity_conf, entity_pages, image_links, categories, first_pars, dbpedia_types = \
+        [[[] for _ in texts] for _ in range(8)]
+
+    if el_config_name == "entity_linking_en.json":
+        entity_ids, entity_tags, entity_conf, entity_pages = \
+            el(entity_substr, tags, sentences, entity_offsets, sentences_offsets, probas)
+        entity_info = {"entity_substr": entity_substr, "entity_offsets": entity_offsets, "entity_ids": entity_ids,
+                       "entity_tags": entity_tags, "entity_conf": entity_conf, "entity_pages": entity_pages}
+    elif el_config_name == "entity_linking_en_full.json":
+        try:
+            entity_ids, entity_tags, entity_conf, entity_pages, image_links, categories, first_pars, dbpedia_types = \
                 el(entity_substr, tags, sentences, entity_offsets, sentences_offsets, probas)
             for i in range(len(entity_substr)):
                 for j in range(len(entity_substr[i])):
@@ -94,16 +130,20 @@ async def entity_extraction(payload: Payload):
                         entity_tags[i][j] = [""]
                     if entity_ids[i][j] == []:
                         entity_ids[i][j] = [""]
+                        entity_tags[i][j] = []
                         entity_conf[i][j] = [0.0]
                         entity_pages[i][j] = [""]
                         image_links[i][j] = [""]
                         first_pars[i][j] = [""]
+                        categories[i][j] = [[]]
+                        dbpedia_types[i][j] = [[]]
+        except Exception as e:
+            logger.error(f"{type(e)} error in entity linking: {e}")
 
-            entity_info = {"entity_substr": entity_substr, "entity_offsets": entity_offsets, "entity_ids": entity_ids,
-                           "entity_tags": entity_tags, "entity_conf": entity_conf, "entity_pages": entity_pages,
-                           "image_links": image_links, "categories": categories, "first_paragraphs": first_pars}
-    except Exception as e:
-        logger.exception(e)
+        entity_info = {"entity_substr": entity_substr, "entity_offsets": entity_offsets, "entity_ids": entity_ids,
+                       "entity_tags": entity_tags, "entity_conf": entity_conf, "entity_pages": entity_pages,
+                       "image_links": image_links, "categories": categories, "first_paragraphs": first_pars,
+                       "dbpedia_types": dbpedia_types}
     total_time = time.time() - st_time
     logger.info(f"entity linking exec time = {total_time:.3f}s")
     return entity_info
