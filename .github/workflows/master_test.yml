@@ -22,7 +22,7 @@ jobs:
           cat .env
       - name: Build
         run: docker-compose up -d
-      - name: Test
+      - name: Wait until deployed
         run: |
           docker run --network container:entity_extraction_svc_agent_1 appropriate/curl \
             -4 \
@@ -32,11 +32,7 @@ jobs:
             --retry 30 \
             --retry-delay 20 \
             --retry-connrefused \
-            --url http://localhost:9999/ \
-            --header 'Content-Type: application/json' \
-            --data '{
-              "text": "The Mona Lisa is a sixteenth century oil painting created by Leonardo. It is held at the Louvre in Paris."
-            }'
+            --url http://localhost:9999/health
       - name: Docker logs dump on failure
         if: failure()
         uses: jwalton/gh-docker-logs@v2.2.0

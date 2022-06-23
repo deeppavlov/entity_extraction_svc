@@ -284,3 +284,8 @@ async def extract(payload: EntityExtractionAgentRequest):
     entities = unpack_entity_extraction_service_response(entities)
 
     return entities
+
+
+@app.get("/health")
+async def healthcheck():
+    return True
