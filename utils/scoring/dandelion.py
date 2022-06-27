@@ -56,12 +56,8 @@ def extract_dandelion(
         "token": DANDELION_TOKEN,
     }
 
-    try:
-        response = session.get(ENDPOINT, params=url_kwargs)
-        data = response.json()
-    except Exception as e:
-        print(f"Unable to extract from {text} because {e}")
-        data = None
+    response = session.get(ENDPOINT, params=url_kwargs)
+    data = response.json()
 
     return data
 
@@ -72,8 +68,7 @@ def extract_batch_dandelion(texts: list, **kwargs):
     with Session() as sess:
         for text in tqdm(texts):
             entities = extract_dandelion(sess, text, **kwargs)
-            if entities:
-                results.append(entities)
+            results.append(entities)
 
     return results
 
