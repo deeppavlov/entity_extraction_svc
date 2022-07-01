@@ -889,23 +889,28 @@ class EntityLinker(Component, Serializable):
     
     def make_query_str(self, entity_substr, tags=None, rels_dict=None):
         title_str = ""
+        make_query_flag = False
         if isinstance(entity_substr, str):
             entity_substr = entity_substr.replace('.', '').replace(',', '')
             if self.delete_hyphens:
-                entity_substr = entity_substr.replace("-", " ").replace("'", " ")
+                entity_substr = entity_substr.replace("-", " ").replace("'", " ").replace("&", "")
+            if len(entity_substr) > 1:
+                make_query_flag = True
             title_str = f"title:{entity_substr}"
         else:
             entity_substr = [elem.replace('.', '').replace(',', '') for elem in entity_substr]
-            entity_substr = [f"title:{elem}" for elem in entity_substr]
-            if len(entity_substr) == 2:
-                title_str = f"({' OR '.join(entity_substr)})"
-            elif len(entity_substr) > 2:
-                entity_lists = []
-                for i in range(len(entity_substr) - 1):
-                    entity_lists.append(" AND ".join(entity_substr[i:i + 2]))
-                for i in range(len(entity_substr) - 2):
-                    entity_lists.append(" AND ".join([entity_substr[i], entity_substr[i + 2]]))
-                title_str = f"({' OR '.join(entity_lists)})"
+            if all([len(elem) > 0 for elem in entity_substr]):
+                entity_substr = [f"title:{elem}" for elem in entity_substr]
+                if len(entity_substr) == 2:
+                    title_str = f"({' OR '.join(entity_substr)})"
+                elif len(entity_substr) > 2:
+                    entity_lists = []
+                    for i in range(len(entity_substr) - 1):
+                        entity_lists.append(" AND ".join(entity_substr[i:i + 2]))
+                    for i in range(len(entity_substr) - 2):
+                        entity_lists.append(" AND ".join([entity_substr[i], entity_substr[i + 2]]))
+                    title_str = f"({' OR '.join(entity_lists)})"
+                make_query_flag = True
         rels_str = ""
         if rels_dict:
             rel_str_list = []
@@ -935,7 +940,7 @@ class EntityLinker(Component, Serializable):
         
         query_str = " AND ".join(query_str_list)
         
-        return query_str
+        return query_str, make_query_flag
     
     def process_cand_ent(self, cand_ent_init, entities_and_ids, entity_substr_split, tags):
         is_misc = False
@@ -966,9 +971,9 @@ class EntityLinker(Component, Serializable):
         if entity_substr:
             if self.tags_filename and not self.using_custom_db:
                 for tag in tags:
-                    query_str = self.make_query_str(entity_substr, None, rels_dict)
+                    query_str, make_query_flag = self.make_query_str(entity_substr, None, rels_dict)
                     log.info(f"query_str {query_str} entity_substr {entity_substr}")
-                    if tag.lower() in self.cursors:
+                    if tag.lower() in self.cursors and make_query_flag:
                         log.info(f"tag {tag}")
                         res = self.cursors[tag.lower()].execute(inv_index_query, (query_str,))
                         entities_and_ids = res.fetchall()
@@ -976,30 +981,31 @@ class EntityLinker(Component, Serializable):
                             cand_ent_init = self.process_cand_ent(cand_ent_init, entities_and_ids,
                                                                   entity_substr_split, [tag])
             else:
-                query_str = self.make_query_str(entity_substr, tags, rels_dict)
+                query_str, make_query_flag = self.make_query_str(entity_substr, tags, rels_dict)
                 log.info(f"query_str {query_str} entity_substr {entity_substr}")
-                res = self.cur.execute(inv_index_query, (query_str,))
-                entities_and_ids = res.fetchall()
-                if entities_and_ids:
-                    cand_ent_init = self.process_cand_ent(cand_ent_init, entities_and_ids, entity_substr_split, tags)
+                if make_query_flag:
+                    res = self.cur.execute(inv_index_query, (query_str,))
+                    entities_and_ids = res.fetchall()
+                    if entities_and_ids:
+                        cand_ent_init = self.process_cand_ent(cand_ent_init, entities_and_ids, entity_substr_split, tags)
         
         if rels_dict and not cand_ent_init:
             if self.tags_filename and not self.using_custom_db:
                 for tag in tags:
-                    query_str = self.make_query_str(entity_substr)
+                    query_str, make_query_flag = self.make_query_str(entity_substr)
                     log.info(f"query_str {query_str} entity_substr {entity_substr}")
-                    if tag.lower() in self.cursors:
+                    if tag.lower() in self.cursors and make_query_flag:
                         res = self.cursors[tag.lower()].execute(inv_index_query, (query_str,))
                         entities_and_ids = res.fetchall()
                         if entities_and_ids:
                             cand_ent_init = self.process_cand_ent(cand_ent_init, entities_and_ids,
                                                                   entity_substr_split, [tag])
             else:
-                query_str = self.make_query_str(entity_substr, tags)
+                query_str, make_query_flag = self.make_query_str(entity_substr, tags)
                 log.info(f"query_str {query_str} entity_substr {entity_substr}")
                 res = self.cur.execute(inv_index_query, (query_str,))
                 entities_and_ids = res.fetchall()
-                if entities_and_ids:
+                if entities_and_ids and make_query_flag:
                     cand_ent_init = self.process_cand_ent(cand_ent_init, entities_and_ids, entity_substr_split, tags)
         
         return cand_ent_init
