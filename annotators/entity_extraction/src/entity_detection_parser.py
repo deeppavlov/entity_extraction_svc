@@ -185,6 +185,22 @@ class EntityDetectionParser(Component):
                     entity_positions_dict[c_tag] = []
                     entity_probas_dict[c_tag] = []
             cnt += 1
+        
+        if any(entity_dict.values()):
+            for tag, entity in entity_dict.items():
+                c_tag = tag.split("-")[-1]
+                entity = ' '.join(entity)
+                for old, new in replace_tokens:
+                    entity = entity.replace(old, new)
+                if entity:
+                    entities_dict[c_tag].append(entity)
+                    entities_positions_dict[c_tag].append(entity_positions_dict[c_tag])
+                    cur_probas = entity_probas_dict[c_tag]
+                    entities_probas_dict[c_tag].append(round(sum(cur_probas)/len(cur_probas), 4))
+                    
+                entity_dict[c_tag] = []
+                entity_positions_dict[c_tag] = []
+                entity_probas_dict[c_tag] = []
 
         entities_list = [entity for tag, entities in entities_dict.items() for entity in entities]
         entities_positions_list = [position for tag, positions in entities_positions_dict.items()
