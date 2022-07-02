@@ -24,8 +24,8 @@ from transformers import AutoModelForTokenClassification, AutoConfig
 from deeppavlov.core.commands.utils import expand_path
 from deeppavlov.core.common.errors import ConfigError
 from deeppavlov.core.common.registry import register
-from deeppavlov.core.models.torch_model import TorchModel
-from deeppavlov.models.torch_bert.crf import CRF
+from src.torch_model import TorchModel
+from src.crf import CRF
 
 log = getLogger(__name__)
 

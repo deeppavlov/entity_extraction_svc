@@ -140,30 +140,16 @@ class EntityLinker(Component, Serializable):
 
     def load(self) -> None:
         if self.db_format == "sqlite":
-            if self.tags_filename:
-                fl = open(str(expand_path(self.tags_filename)), 'r')
-                lines = fl.readlines()
-                tags = []
-                for line in lines:
-                    tags.append(line.strip().split()[0])
-                if "O" in tags:
-                    tags.remove("O")
-                for tag in ["ACTOR", "ATHLETE", "MUSICIAN", "POLITICIAN", "WRITER", "POLITICIAN"]:
-                    if tag in tags:
-                        tags.remove(tag)
-                for tag in ["MISC", "PER"]:
-                    if tag not in tags:
-                        tags.append(tag)
-                self.cursors = {}
-                for tag in tags:
-                    conn = sqlite3.connect(f"{self.load_path}/{tag.lower()}.db", check_same_thread=False)
-                    cur = conn.cursor()
-                    self.cursors[tag.lower()] = cur
-                conn = sqlite3.connect(str(self.load_path / self.add_info_filename), check_same_thread=False)
-                self.add_info_cur = conn.cursor()
-            else:
-                self.conn = sqlite3.connect(str(self.load_path / self.entities_database_filename), check_same_thread=False)
-                self.cur = self.conn.cursor()
+            tags = ["ORG", "PERSON", "GPE", "NORP", "WORK_OF_ART", "EVENT", "LOC", "FAC", "LAW", "LANGUAGE",
+                    "PRODUCT", "MISC"]
+            self.cursors = {}
+            for tag in tags:
+                log.info(f"{self.load_path}/{tag.lower()}.db")
+                conn = sqlite3.connect(f"{self.load_path}/{tag.lower()}.db", check_same_thread=False)
+                cur = conn.cursor()
+                self.cursors[tag.lower()] = cur
+            conn = sqlite3.connect(str(self.load_path / self.add_info_filename), check_same_thread=False)
+            self.add_info_cur = conn.cursor()
             self.occ_labels_dict = load_pickle(expand_path(self.occ_labels_filename))
         else:
             self.name_to_q = load_pickle(self.load_path / self.name_to_q_filename)
