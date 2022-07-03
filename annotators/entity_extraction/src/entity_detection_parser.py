@@ -45,8 +45,9 @@ class QuestionSignChecker(Component):
 class EntityDetectionParser(Component):
     """This class parses probabilities of tokens to be a token from the entity substring."""
 
-    def __init__(self, o_tag: str, tags_file: str, entity_tags: List[str] = None, ignore_points: bool = False,
-                 return_entities_with_tags: bool = False, thres_proba: float = 0.8, **kwargs):
+    def __init__(self, o_tag: str, tags_file: str, entity_tags: List[str] = None, not_used_tags: List[str] = None,
+                 ignore_points: bool = False, return_entities_with_tags: bool = False, thres_proba: float = 0.8,
+                 **kwargs):
         """
         Args:
             entity_tags: tags for entities
@@ -68,6 +69,7 @@ class EntityDetectionParser(Component):
             tags = [line.split('\t')[0] for line in fl.readlines()]
             if self.entity_tags is None:
                 self.entity_tags = list({tag.split('-')[1] for tag in tags if len(tag.split('-')) > 1}.difference({self.o_tag}))
+            self.entity_tags = [elem for elem in self.entity_tags if elem not in not_used_tags]
 
             self.entity_prob_ind = {entity_tag: [i for i, tag in enumerate(tags) if entity_tag in tag]
                                     for entity_tag in self.entity_tags}

@@ -55,6 +55,7 @@
         "load_before_drop": true,
         "save_path": "{MODEL_PATH}/model",
         "load_path": "{MODEL_PATH}/model",
+        "use_crf": false,
         "in": ["x_subword_tok_ids", "attention_mask", "startofword_markers"],
         "in_y": ["y_ind"],
         "out": ["y_pred_ind", "probas"]
@@ -95,11 +96,11 @@
       "DOWNLOADS_PATH": "{ROOT_PATH}/downloads",
       "MODELS_PATH": "{ROOT_PATH}/models",
       "TRANSFORMER": "bert-base-cased",
-      "MODEL_PATH": "{MODELS_PATH}/ner_ontonotes_bert_torch_crf"
+      "MODEL_PATH": "{MODELS_PATH}/ner_ontonotes_bert_misc"
     },
     "download": [
       {
-        "url": "http://files.deeppavlov.ai/v1/ner/ner_ontonotes_bert_torch_crf.tar.gz",
+        "url": "http://files.deeppavlov.ai/deeppavlov_data/entity_linking/ontonotes_misc.tar.gz",
         "subdir": "{MODEL_PATH}"
       }
     ]

@@ -585,7 +585,10 @@ class EntityLinker(Component, Serializable):
             if not low_conf:
                 entity_ids_list.append(copy.deepcopy(entity_ids[:self.num_entities_to_return]))
                 pages_list.append(copy.deepcopy(pages[:self.num_entities_to_return]))
-                conf_list.append(copy.deepcopy(final_confs[:self.num_entities_to_return]))
+                confs_elem = copy.deepcopy(final_confs[:self.num_entities_to_return])
+                if confs_elem and confs_elem[0] < 0.5:
+                    confs_elem[0] = 0.8
+                conf_list.append(confs_elem)
                 ent_tags_list.append(copy.deepcopy(ent_tags[:self.num_entities_to_return]))
                 wiki_types_list.append(copy.deepcopy(wiki_types[:self.num_entities_to_return]))
             else:
