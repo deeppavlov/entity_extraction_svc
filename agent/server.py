@@ -1,9 +1,9 @@
 import logging
 from datetime import datetime
-from typing import List, Union, Optional
+from typing import List, Union, Optional, Literal
 
 import requests
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from starlette.middleware.cors import CORSMiddleware
 
@@ -12,6 +12,7 @@ from agent.constants import (
     WIKIPEDIA_PAGE_URI_PREFIX,
     WIKIPEDIA_FILE_URI_PREFIX,
 )
+from agent import preprocessing
 
 
 logging.basicConfig(
@@ -33,7 +34,20 @@ app.add_middleware(
 class EntityExtractionAgentRequest(BaseModel):
     """Agent gateway request"""
 
-    text: str
+    text: Optional[str]
+    html: Optional[str]
+    parser_engine: Optional[Literal["bs4", "trafilatura"]] = "bs4"
+    parser_kwargs: Optional[dict] = {}
+    attach_parsed_html: bool = False
+    include_extras: bool = True
+
+
+class HtmlParserAgentRequest(BaseModel):
+    """Agent HTML parser request"""
+
+    html: str
+    parser_engine: Optional[Literal["bs4", "trafilatura"]] = "bs4"
+    parser_kwargs: Optional[dict] = {}
 
 
 class EntityExtractionServiceRequest(BaseModel):
@@ -166,11 +180,11 @@ class EntityAnnotation(BaseEntityAnnotation):
 
 
 class BaseEntityAnnotationWithExtras(BaseEntityAnnotation):
-    extras: List[BaseEntityAnnotation]
+    extras: Optional[List[BaseEntityAnnotation]]
 
 
 class EntityAnnotationWithExtras(EntityAnnotation):
-    extras: List[EntityAnnotation]
+    extras: Optional[List[EntityAnnotation]]
 
 
 AnyBaseAnnotation = Union[BaseEntityAnnotation, BaseEntityAnnotationWithExtras]
@@ -180,8 +194,29 @@ AnyAnnotation = Union[EntityAnnotation, EntityAnnotationWithExtras]
 class EntityExtractionAgentResponse(BaseModel):
     annotations: Optional[List[AnyAnnotation]] = []
     unlisted_annotations: Optional[List[AnyBaseAnnotation]] = []
+    parsed_html: Optional[str]
     lang: str
     timestamp: datetime
+
+
+def preprocess_text(text: str):
+    text = preprocessing.add_trailing_period(text)
+    text = preprocessing.replace_unprocessable_chars(text)
+
+    return text
+
+
+def preprocess_html(html: str, engine: str, **engine_kwargs):
+    if engine == "bs4":
+        text = preprocessing.parse_html_bs4(html, **engine_kwargs)
+    elif engine == "trafilatura":
+        text = preprocessing.parse_html_trafilatura(html, **engine_kwargs)
+    else:
+        raise ValueError(f"engine must be either 'bs4' or 'trafilatura', not {engine}")
+
+    text = preprocess_text(text)
+
+    return text
 
 
 def unpack_annotation(
@@ -219,7 +254,7 @@ def unpack_annotation(
             tags=entities.tags(entity_idx),
             image=entities.images(entity_idx, variety_idx),
             lod=entities.lod(entity_idx, variety_idx),
-            types=entities.types(entity_idx, variety_idx)
+            types=entities.types(entity_idx, variety_idx),
         )
     else:
         return BaseEntityAnnotation(
@@ -232,6 +267,7 @@ def unpack_annotation(
 
 def unpack_entity_extraction_service_response(
     entities: EntityExtractionServiceResponse,
+    parsed_html: str,
     include_extras: bool = True,
 ):
     unlisted_annotations = []
@@ -239,31 +275,33 @@ def unpack_entity_extraction_service_response(
 
     for idx in range(entities.count_entities()):
         top_annotation = unpack_annotation(entities, idx, 0)
+        full_annotation_kwargs = top_annotation.dict()
 
         if include_extras:
             extra_annotations = []
+            listed_annotation_class = EntityAnnotationWithExtras
+            unlisted_annotation_class = BaseEntityAnnotationWithExtras
 
             for variety_idx in range(1, entities.count_entity_variants(idx)):
                 extra_annotation = unpack_annotation(entities, idx, variety_idx)
                 extra_annotations.append(extra_annotation)
 
+            full_annotation_kwargs["extras"] = extra_annotations
         else:
-            extra_annotations = None
+            listed_annotation_class = EntityAnnotation
+            unlisted_annotation_class = BaseEntityAnnotation
 
         if top_annotation.has_wikidata:
-            full_annotation = EntityAnnotationWithExtras(
-                **top_annotation.dict(), extras=extra_annotations
-            )
+            full_annotation = listed_annotation_class(**full_annotation_kwargs)
             listed_annotations.append(full_annotation)
         else:
-            full_annotation = BaseEntityAnnotationWithExtras(
-                **top_annotation.dict(), extras=extra_annotations
-            )
+            full_annotation = unlisted_annotation_class(**full_annotation_kwargs)
             unlisted_annotations.append(full_annotation)
 
     return EntityExtractionAgentResponse(
         annotations=listed_annotations,
         unlisted_annotations=unlisted_annotations,
+        parsed_html=parsed_html,
         lang="en",
         timestamp=datetime.utcnow(),
     )
@@ -274,13 +312,37 @@ server_settings = ServerSettings()
 
 @app.post("/")
 async def extract(payload: EntityExtractionAgentRequest):
-    request_data = EntityExtractionServiceRequest(texts=[payload.text]).dict()
+    text = ""
+    if payload.text and payload.html:
+        raise HTTPException(
+            status_code=400, detail="Provide either text or html but not both"
+        )
+    elif not (payload.text or payload.html):
+        raise HTTPException(status_code=400, detail="Provide either text or html")
+    elif payload.text:
+        text = preprocess_text(payload.text)
+    elif payload.html:
+        text = preprocess_html(payload.html, payload.parser_engine, **payload.parser_kwargs)
+
+    request_data = EntityExtractionServiceRequest(texts=[text]).dict()
     response = requests.post(server_settings.entity_extraction_url, json=request_data)
     entities = response.json()
 
     logger.debug(entities)
 
     entities = EntityExtractionServiceResponse(**entities)
-    entities = unpack_entity_extraction_service_response(entities)
+    entities = unpack_entity_extraction_service_response(
+        entities, parsed_html=text, include_extras=payload.include_extras
+    )
 
-    return entities
+    if payload.html and payload.attach_parsed_html:
+        exclude = set()
+    else:
+        exclude = {"parsed_html"}
+
+    return entities.dict(exclude=exclude)
+
+
+@app.post("/parse_html")
+async def parse_html(payload: HtmlParserAgentRequest):
+    return preprocess_html(payload.html, payload.parser_engine, **payload.parser_kwargs)
