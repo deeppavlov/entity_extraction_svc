@@ -36,7 +36,7 @@ class EntityExtractionAgentRequest(BaseModel):
 
     text: Optional[str]
     html: Optional[str]
-    parser_engine: Optional[Literal["bs4", "trafilatura"]] = "bs4"
+    parser_engine: Optional[Literal["bs4", "trafilatura"]] = "trafilatura"
     parser_kwargs: Optional[dict] = {}
     attach_parsed_html: bool = False
     include_extras: bool = True
@@ -46,7 +46,7 @@ class HtmlParserAgentRequest(BaseModel):
     """Agent HTML parser request"""
 
     html: str
-    parser_engine: Optional[Literal["bs4", "trafilatura"]] = "bs4"
+    parser_engine: Optional[Literal["bs4", "trafilatura"]] = "trafilatura"
     parser_kwargs: Optional[dict] = {}
 
 

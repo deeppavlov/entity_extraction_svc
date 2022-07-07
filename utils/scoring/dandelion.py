@@ -6,7 +6,7 @@ from requests import Session
 
 ENDPOINT = "https://api.dandelion.eu/datatxt/nex/v1/"
 TEXT_TYPES = ["text", "html", "html_fragment"]
-INCLUDE_OPTIONS = [
+ALL_INCLUDE_OPTIONS = [
     "types",
     "categories",
     "abstract",
@@ -62,8 +62,8 @@ def extract_dandelion(
     if text_type not in TEXT_TYPES:
         raise Exception(f"Choose input text type from {', '.join(TEXT_TYPES)}")
 
-    if include and set(include) - set(INCLUDE_OPTIONS):
-        raise Exception(f"Choose include values from {', '.join(INCLUDE_OPTIONS)}")
+    if include and set(include) - set(ALL_INCLUDE_OPTIONS):
+        raise Exception(f"Choose include values from {', '.join(ALL_INCLUDE_OPTIONS)}")
 
     if lang and lang not in LANG_OPTIONS:
         raise Exception(f"Choose lang value from {', '.join(LANG_OPTIONS)}")
@@ -76,7 +76,7 @@ def extract_dandelion(
 
     url_kwargs = {
         text_type: text,
-        "lang": lang or "auto",
+        "lang": lang or "en",
         "top_entities": top_entities,
         "min_confidence": min_confidence,
         "min_length": min_length,
