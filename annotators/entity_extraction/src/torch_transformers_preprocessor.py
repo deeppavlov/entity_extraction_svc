@@ -435,3 +435,101 @@ class TorchTransformersEntityRankerPreprocessor(Component):
             return input_features, special_tokens_pos
         else:
             return input_features
+
+
+@register('torch_transformers_el_tags_preprocessor')
+class TorchTransformersElTagPreprocessor(Component):
+    
+    def __init__(self,
+                 vocab_file: str,
+                 do_lower_case: bool = False,
+                 max_seq_length: int = 512,
+                 max_subword_length: int = None,
+                 token_masking_prob: float = 0.0,
+                 return_offsets: bool = False,
+                 cls_token: str = "[CLS]",
+                 sep_token: str = "[SEP]",
+                 **kwargs):
+        self._re_tokenizer = re.compile(r"[\w']+|[^\w ]")
+        
+        self.max_seq_length = max_seq_length
+        self.max_subword_length = max_subword_length
+        vocab_file = str(expand_path(vocab_file))
+        self.tokenizer = AutoTokenizer.from_pretrained(vocab_file, do_lower_case=do_lower_case)
+        self.token_masking_prob = token_masking_prob
+        self.cls_token = cls_token
+        self.sep_token = sep_token
+
+    def __call__(self, tokens_batch, entity_offsets_batch, mentions_batch=None, pages_batch=None):
+        token_ids_batch, attention_mask_batch, subw_tokens_batch, entity_subw_indices_batch = [], [], [], []
+        if mentions_batch is None:
+            mentions_batch = [[] for _ in tokens_batch]
+        if pages_batch is None:
+            pages_batch = [[] for _ in tokens_batch]
+        
+        for tokens, entity_offsets_list, mentions_list, pages_list in \
+                zip(tokens_batch, entity_offsets_batch, mentions_batch, pages_batch):
+            tokens_list = []
+            tokens_offsets_list = []
+            for elem in re.finditer(self._re_tokenizer, tokens):
+                tokens_list.append(elem[0])
+                tokens_offsets_list.append((elem.start(), elem.end()))
+            entity_indices_list = []
+            for start_offset, end_offset in entity_offsets_list:
+                entity_indices = []
+                for ind, (start_tok_offset, end_tok_offset) in enumerate(tokens_offsets_list):
+                    if start_tok_offset >= start_offset and end_tok_offset <= end_offset:
+                        entity_indices.append(ind)
+                if not entity_indices:
+                    for ind, (start_tok_offset, end_tok_offset) in enumerate(tokens_offsets_list):
+                        if start_tok_offset >= start_offset:
+                            entity_indices.append(ind)
+                            break
+                entity_indices_list.append(set(entity_indices))
+            ind = 0
+            subw_tokens_list = [self.cls_token]
+            entity_subw_indices_list = [[] for _ in entity_indices_list]
+            for n, tok in enumerate(tokens_list):
+                subw_tok = self.tokenizer.tokenize(tok)
+                subw_tokens_list += subw_tok
+                for j in range(len(entity_indices_list)):
+                    if n in entity_indices_list[j]:
+                        for k in range(len(subw_tok)):
+                            entity_subw_indices_list[j].append(ind + k + 1)
+                ind += len(subw_tok)
+            subw_tokens_list = subw_tokens_list[:508]
+            subw_tokens_list.append(self.sep_token)
+            subw_tokens_batch.append(subw_tokens_list)
+            
+            for n in range(len(entity_subw_indices_list)):
+                entity_subw_indices_list[n] = sorted(entity_subw_indices_list[n])
+            entity_subw_indices_batch.append(entity_subw_indices_list)
+        
+        token_ids_batch = [self.tokenizer.convert_tokens_to_ids(subw_tokens_list)
+                           for subw_tokens_list in subw_tokens_batch]
+        token_ids_batch = zero_pad(token_ids_batch, dtype=int, padding=0)
+        attention_mask_batch = Mask()(subw_tokens_batch)
+        
+        return token_ids_batch, attention_mask_batch, entity_subw_indices_batch
+
+
+@register('torch_transformers_el_tags_postprocessor')
+class TorchTransformersElTagPostprocessor(Component):
+    def __init__(self, tags_file, **kwargs):
+        tags_file = str(expand_path(tags_file))
+        self.tags_list = []
+        with open(tags_file, 'r') as fl:
+            lines = fl.readlines()
+            for line in lines:
+                self.tags_list.append(line.strip().split()[0])
+    
+    def __call__(self, probas_batch):
+        ent_tag_proba_batch = []
+        for probas_list in probas_batch:
+            ent_tag_proba_list = []
+            for probas in probas_list:
+                tags_with_probas = [(float(proba), self.tags_list[n]) for n, proba in enumerate(probas)]
+                tags_with_probas = sorted(tags_with_probas, key=lambda x: x[0], reverse=True)
+                ent_tag_proba_list.append(tags_with_probas[:3])
+            ent_tag_proba_batch.append(ent_tag_proba_list)
+        return ent_tag_proba_batch

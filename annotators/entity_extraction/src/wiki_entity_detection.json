@@ -42,6 +42,7 @@
         "return_tags_and_probas": true,
         "encoder_layer_ids": [-1],
         "optimizer": "AdamW",
+        "use_crf": false,
         "optimizer_parameters": {
           "lr": 2e-05,
           "weight_decay": 1e-06,
@@ -96,11 +97,11 @@
       "DOWNLOADS_PATH": "{ROOT_PATH}/downloads",
       "MODELS_PATH": "{ROOT_PATH}/models",
       "TRANSFORMER": "bert-base-cased",
-      "MODEL_PATH": "{MODELS_PATH}/ner_ontonotes_bert_misc"
+      "MODEL_PATH": "{MODELS_PATH}/wiki_entity_detection_more_data"
     },
     "download": [
       {
-        "url": "http://files.deeppavlov.ai/deeppavlov_data/entity_linking/ontonotes_misc.tar.gz",
+        "url": "http://files.deeppavlov.ai/deeppavlov_data/entity_linking/wiki_entity_detection_more_data.tar.gz",
         "subdir": "{MODEL_PATH}"
       }
     ]
