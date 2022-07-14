@@ -148,10 +148,10 @@ class EntityLinker(Component, Serializable):
                     tags.append(line.strip().split()[0])
                 if "O" in tags:
                     tags.remove("O")
-                for tag in ["ACTOR", "ATHLETE", "MUSICIAN", "POLITICIAN", "WRITER", "POLITICIAN"]:
+                for tag in ["ACTOR", "ATHLETE", "MUSICIAN", "POLITICIAN", "WRITER", "POLITICIAN", "PAINTER", "ENTREPRENEUR"]:
                     if tag in tags:
                         tags.remove(tag)
-                for tag in ["MISC", "PER"]:
+                for tag in ["MISC", "PERSON"]:
                     if tag not in tags:
                         tags.append(tag)
                 self.cursors = {}
@@ -436,8 +436,8 @@ class EntityLinker(Component, Serializable):
                 tags_for_search = self.process_tags_for_search(entity_substr_list, tags_with_probas)
                 if tags_for_search:
                     tags_for_search = self.correct_tags(entity_substr, tags_for_search, tags_with_probas)
-                    tags_by_iter = {0: {"POLITICIAN", "ACTOR", "WRITER", "MUSICIAN", "ATHLETE", "PER"},
-                                    1: {"POLITICIAN", "ACTOR", "WRITER", "MUSICIAN", "ATHLETE", "PER"},
+                    tags_by_iter = {0: {"POLITICIAN", "ACTOR", "WRITER", "MUSICIAN", "ATHLETE", "PAINTER", "ENTREPRENEUR", "PER"},
+                                    1: {"POLITICIAN", "ACTOR", "WRITER", "MUSICIAN", "ATHLETE", "PAINTER", "ENTREPRENEUR", "PER"},
                                     2: {"SPORTS_SEASON", "CHAMPIONSHIP", "SPORTS_EVENT"}
                                     }
                     if not init_cand_ent_scores_dict[n] and tags_for_search and \
@@ -758,11 +758,11 @@ class EntityLinker(Component, Serializable):
         return tags_for_search
     
     def correct_tags(self, entity_substr, tags_for_search, tags_with_probas):
-        if tags_for_search[0] in {"POLITICIAN", "ACTOR", "WRITER", "MUSICIAN", "ATHLETE"} \
+        if tags_for_search[0] in {"POLITICIAN", "ACTOR", "WRITER", "MUSICIAN", "ATHLETE", "PAINTER", "ENTREPRENEUR"} \
                 and "PER" not in tags_for_search:
             tags_for_search.append("PER")
         elif tags_for_search[0] == "PER":
-            for new_tag in {"POLITICIAN", "ACTOR", "WRITER", "MUSICIAN", "ATHLETE"}:
+            for new_tag in {"POLITICIAN", "ACTOR", "WRITER", "MUSICIAN", "ATHLETE", "PAINTER", "ENTREPRENEUR"}:
                 if new_tag not in tags_for_search:
                     tags_for_search.append(new_tag)
         if tags_with_probas[0][1] == "COUNTRY" and (tags_with_probas[1][1] == "SPORTS_EVENT" or
@@ -801,7 +801,7 @@ class EntityLinker(Component, Serializable):
                                                   cur_types, cur_p641):
         p641_ent, p641_tr = set(), set()
         if (cur_substr_score == 1.0 and len(entity_substr.split()) > 1
-                and tags_for_search[0] in {"POLITICIAN", "ACTOR", "WRITER", "MUSICIAN", "ATHLETE", "PER"}) or \
+                and tags_for_search[0] in {"POLITICIAN", "ACTOR", "WRITER", "MUSICIAN", "ATHLETE", "PAINTER", "ENTREPRENEUR", "PER"}) or \
                 (len(entity_substr.split()) >= 3
                  and tags_for_search[0] in {"SPORTS_EVENT", "CHAMPIONSHIP", "SPORTS_SEASON"}):
             if cur_p641:
@@ -840,7 +840,7 @@ class EntityLinker(Component, Serializable):
                 cand_ent_init = self.find_fuzzy_match_pickle(entity_substr_split, tags_for_search)
             total_cand_ent_init = {**cand_ent_init, **total_cand_ent_init}
         
-        if tags_for_search and tags_for_search[0] in {"POLITICIAN", "ACTOR", "WRITER", "MUSICIAN", "ATHLETE", "PER"}:
+        if tags_for_search and tags_for_search[0] in {"POLITICIAN", "ACTOR", "WRITER", "MUSICIAN", "ATHLETE", "PAINTER", "ENTREPRENEUR", "PER"}:
             for entity in total_cand_ent_init:
                 entities_scores = list(total_cand_ent_init[entity])
                 entities_scores = sorted(entities_scores, key=lambda x: (x[0], x[1]), reverse=True)
