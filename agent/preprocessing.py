@@ -1,4 +1,5 @@
 import re
+from typing import Union
 
 import trafilatura
 from bs4 import BeautifulSoup
@@ -56,7 +57,7 @@ def remove_tag_spans(text: str):
     return re.sub('<[^<]+>', "", text).strip()
 
 
-def parse_html_bs4(raw_html: str, parser: str = "html.parser"):
+def parse_html_bs4(raw_html: Union[bytes, str], parser: str = "html.parser"):
     """Extracts text from html using BeautifulSoup
 
     Args:
@@ -73,7 +74,7 @@ def parse_html_bs4(raw_html: str, parser: str = "html.parser"):
     return doc
 
 
-def parse_html_trafilatura(raw_html: str, **kwargs):
+def parse_html_trafilatura(raw_html: Union[bytes, str], **kwargs):
     """Extracts text from html using trafilatura
 
     Args:

@@ -36,6 +36,7 @@ class EntityExtractionAgentRequest(BaseModel):
 
     text: Optional[str]
     html: Optional[str]
+    url: Optional[str]
     parser_engine: Optional[Literal["bs4", "trafilatura"]] = "trafilatura"
     parser_kwargs: Optional[dict] = {}
     attach_parsed_html: bool = False
@@ -45,7 +46,8 @@ class EntityExtractionAgentRequest(BaseModel):
 class HtmlParserAgentRequest(BaseModel):
     """Agent HTML parser request"""
 
-    html: str
+    html: Optional[str]
+    url: Optional[str]
     parser_engine: Optional[Literal["bs4", "trafilatura"]] = "trafilatura"
     parser_kwargs: Optional[dict] = {}
 
@@ -206,7 +208,7 @@ def preprocess_text(text: str):
     return text
 
 
-def preprocess_html(html: str, engine: str, **engine_kwargs):
+def preprocess_html(html: Union[bytes, str], engine: str, **engine_kwargs):
     if engine == "bs4":
         text = preprocessing.parse_html_bs4(html, **engine_kwargs)
     elif engine == "trafilatura":
@@ -215,6 +217,13 @@ def preprocess_html(html: str, engine: str, **engine_kwargs):
         raise ValueError(f"engine must be either 'bs4' or 'trafilatura', not {engine}")
 
     text = preprocess_text(text)
+
+    return text
+
+
+def preprocess_url(url: str, html_engine: str, **html_engine_kwargs):
+    raw_html = requests.get(url).content
+    text = preprocess_html(raw_html, html_engine, **html_engine_kwargs)
 
     return text
 
@@ -313,16 +322,20 @@ server_settings = ServerSettings()
 @app.post("/")
 async def extract(payload: EntityExtractionAgentRequest):
     text = ""
-    if payload.text and payload.html:
+    n_main_args = sum(int(bool(pl_value)) for pl_value in [payload.text, payload.html, payload.url])
+
+    if n_main_args > 1:
         raise HTTPException(
-            status_code=400, detail="Provide either text or html but not both"
+            status_code=400, detail="Provide only text, html or url"
         )
-    elif not (payload.text or payload.html):
-        raise HTTPException(status_code=400, detail="Provide either text or html")
+    elif not (payload.text or payload.html or payload.url):
+        raise HTTPException(status_code=400, detail="Provide either text, html or url")
     elif payload.text:
         text = preprocess_text(payload.text)
     elif payload.html:
         text = preprocess_html(payload.html, payload.parser_engine, **payload.parser_kwargs)
+    elif payload.url:
+        text = preprocess_url(payload.url, payload.parser_engine, **payload.parser_kwargs)
 
     request_data = EntityExtractionServiceRequest(texts=[text]).dict()
     response = requests.post(server_settings.entity_extraction_url, json=request_data)
@@ -345,4 +358,13 @@ async def extract(payload: EntityExtractionAgentRequest):
 
 @app.post("/parse_html")
 async def parse_html(payload: HtmlParserAgentRequest):
-    return preprocess_html(payload.html, payload.parser_engine, **payload.parser_kwargs)
+    text = ""
+
+    if payload.html and payload.url:
+        raise HTTPException(status_code=400, detail="Provide only html or url")
+    elif payload.html:
+        text = preprocess_html(payload.html, payload.parser_engine, **payload.parser_kwargs)
+    elif payload.url:
+        text = preprocess_url(payload.url, payload.parser_engine, **payload.parser_kwargs)
+
+    return text
