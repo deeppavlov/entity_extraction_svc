@@ -134,7 +134,7 @@ class TorchTransformersEntityRankerInfer:
                  descr_encoder_weights_path,
                  bilinear_weights_path,
                  special_token_id: int,
-                 do_lower_case: bool = False,
+                 do_lower_case: bool = True,
                  batch_size: int = 5,
                  emb_size: int = 512,
                  block_size: int = 8,
@@ -189,7 +189,6 @@ class TorchTransformersEntityRankerInfer:
                 if found_n == -1:
                     found_n = 0
                 special_tokens_pos.append(found_n)
-
             cur_entity_emb_batch = self.text_encoder(input_ids=context_input_ids,
                                                      attention_mask=context_attention_mask,
                                                      entity_tokens_pos=special_tokens_pos)

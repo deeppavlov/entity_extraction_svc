@@ -44,7 +44,7 @@ class EntityLinker(Component, Serializable):
     def __init__(self, load_path: str,
                  entities_database_filename: str = None,
                  num_entities_for_conn_ranking: int = 50,
-                 entity_descr_ranker: TorchTransformersEntityRankerInfer = None,
+                 entity_ranker = None,
                  num_entities_to_return: int = 10,
                  max_text_len: int = 300,
                  lang: str = "ru",
@@ -92,7 +92,7 @@ class EntityLinker(Component, Serializable):
         self.morph = pymorphy2.MorphAnalyzer()
         self.lemmatize = lemmatize
         self.entities_database_filename = entities_database_filename
-        self.entity_descr_ranker = entity_descr_ranker
+        self.entity_ranker = entity_ranker
         self.num_entities_for_conn_ranking = num_entities_for_conn_ranking
         self.num_entities_to_return = num_entities_to_return
         self.max_text_len = max_text_len
@@ -148,10 +148,10 @@ class EntityLinker(Component, Serializable):
                     tags.append(line.strip().split()[0])
                 if "O" in tags:
                     tags.remove("O")
-                for tag in ["ACTOR", "ATHLETE", "MUSICIAN", "POLITICIAN", "WRITER", "POLITICIAN"]:
+                for tag in ["ACTOR", "ATHLETE", "MUSICIAN", "POLITICIAN", "WRITER", "POLITICIAN", "PAINTER", "ENTREPRENEUR"]:
                     if tag in tags:
                         tags.remove(tag)
-                for tag in ["MISC", "PER"]:
+                for tag in ["MISC", "PERSON"]:
                     if tag not in tags:
                         tags.append(tag)
                 self.cursors = {}
@@ -266,11 +266,9 @@ class EntityLinker(Component, Serializable):
         self.conn.commit()
 
     def __call__(self, entity_substr_batch: List[List[str]],
-                       entity_tags_batch: List[List[str]],
                        sentences_batch: List[List[str]] = None,
                        entity_offsets_batch: List[List[List[int]]] = None,
-                       sentences_offsets_batch: List[List[Tuple[int, int]]] = None,
-                       probas_batch: List[List[List[float]]] = None):
+                       sentences_offsets_batch: List[List[Tuple[int, int]]] = None):
         entity_substr_batch = [[entity_substr.lower() for entity_substr in entity_substr_list]
                                for entity_substr_list in entity_substr_batch]
         if sentences_offsets_batch is None and sentences_batch is not None:
@@ -287,9 +285,6 @@ class EntityLinker(Component, Serializable):
             sentences_batch = [[] for _ in entity_substr_batch]
             sentences_offsets_batch = [[] for _ in entity_substr_batch]
         
-        if probas_batch is None:
-            probas_batch = [[[1.0 for _ in entity_tags] for entity_tags in entity_tags_list]
-                            for entity_tags_list in entity_tags_batch]
         log.info(f"sentences_batch {sentences_batch}")
         text_batch = [" ".join(sentences_list) for sentences_list in sentences_batch]
         if entity_offsets_batch is None and sentences_batch is not None:
@@ -305,9 +300,8 @@ class EntityLinker(Component, Serializable):
                 entity_offsets_batch[n] = entity_offsets_list
         
         log.info(f"text_batch {text_batch} entity_offsets_batch {entity_offsets_batch}")
-        tags_with_probas_batch = [[list(zip(probas, entity_tags)) for entity_tags, probas
-                                   in zip(entity_tags_list, probas_list)]
-                                  for entity_tags_list, probas_list in zip(entity_tags_batch, probas_batch)]
+        # (proba, entity_tag)
+        tags_with_probas_batch = self.entity_ranker(text_batch, entity_offsets_batch, entity_substr_batch)
         entity_sent_batch = []
         for entity_offsets_list, sentences_offsets_list in zip(entity_offsets_batch, sentences_offsets_batch):
             entity_sent_list = []
@@ -442,8 +436,8 @@ class EntityLinker(Component, Serializable):
                 tags_for_search = self.process_tags_for_search(entity_substr_list, tags_with_probas)
                 if tags_for_search:
                     tags_for_search = self.correct_tags(entity_substr, tags_for_search, tags_with_probas)
-                    tags_by_iter = {0: {"POLITICIAN", "ACTOR", "WRITER", "MUSICIAN", "ATHLETE", "PER"},
-                                    1: {"POLITICIAN", "ACTOR", "WRITER", "MUSICIAN", "ATHLETE", "PER"},
+                    tags_by_iter = {0: {"POLITICIAN", "ACTOR", "WRITER", "MUSICIAN", "ATHLETE", "PAINTER", "ENTREPRENEUR", "PER"},
+                                    1: {"POLITICIAN", "ACTOR", "WRITER", "MUSICIAN", "ATHLETE", "PAINTER", "ENTREPRENEUR", "PER"},
                                     2: {"SPORTS_SEASON", "CHAMPIONSHIP", "SPORTS_EVENT"}
                                     }
                     if not init_cand_ent_scores_dict[n] and tags_for_search and \
@@ -520,25 +514,17 @@ class EntityLinker(Component, Serializable):
             
             entity_ids = [elem[0] for elem in top_entities_with_scores[:self.num_entities_for_bert_ranking]]
             descrs = [elem[-1] for elem in top_entities_with_scores[:self.num_entities_for_bert_ranking]]
-            tm_st = time.time()
-            if self.using_custom_db:
-                descr_scores = [[1.0 for _ in entity_ids]]
-            else:
-                descr_scores = self.rank_by_description([entity_substr], [entity_offsets], [entity_ids], [descrs], sentences_list,
-                                                        sentences_offsets_list, [len(entity_substr)])
-            log.info(f"{entity_substr} {round(time.time() - tm_st, 2)}")
             
             filtered_top_entities_with_scores = []
-            for (entity, substr_score, num_rels, conn_score_notag, conn_score_tag, page, wiki_types, ent_tag, descr), \
-                descr_score in zip(top_entities_with_scores, descr_scores[0]):
-                if descr_score > 0.8:
-                    filtered_top_entities_with_scores.append([entity, substr_score, num_rels, conn_score_notag,
-                                                              conn_score_tag, float(descr_score), page, wiki_types, ent_tag])
+            for entity, substr_score, num_rels, conn_score_notag, conn_score_tag, page, wiki_types, ent_tag, descr in \
+                    top_entities_with_scores:
+                filtered_top_entities_with_scores.append([entity, substr_score, num_rels, conn_score_notag,
+                                                          conn_score_tag, float(substr_score), page, wiki_types, ent_tag])
             if not filtered_top_entities_with_scores:
-                for (entity, substr_score, num_rels, conn_score_notag, conn_score_tag, page, wiki_types, ent_tag, descr), descr_score in \
-                        zip(top_entities_with_scores, descr_scores[0]):
+                for entity, substr_score, num_rels, conn_score_notag, conn_score_tag, page, wiki_types, ent_tag, descr in \
+                        top_entities_with_scores:
                     filtered_top_entities_with_scores.append([entity, substr_score, num_rels, conn_score_notag,
-                                                              conn_score_tag, float(descr_score), page, wiki_types, ent_tag])
+                                                              conn_score_tag, float(substr_score), page, wiki_types, ent_tag])
             top_entities_with_scores = filtered_top_entities_with_scores
             
             if len(entity_substr_split) >= 4 or tag in {"TYPE_OF_SPORT", "ORG"}:
@@ -772,11 +758,11 @@ class EntityLinker(Component, Serializable):
         return tags_for_search
     
     def correct_tags(self, entity_substr, tags_for_search, tags_with_probas):
-        if tags_for_search[0] in {"POLITICIAN", "ACTOR", "WRITER", "MUSICIAN", "ATHLETE"} \
+        if tags_for_search[0] in {"POLITICIAN", "ACTOR", "WRITER", "MUSICIAN", "ATHLETE", "PAINTER", "ENTREPRENEUR"} \
                 and "PER" not in tags_for_search:
             tags_for_search.append("PER")
         elif tags_for_search[0] == "PER":
-            for new_tag in {"POLITICIAN", "ACTOR", "WRITER", "MUSICIAN", "ATHLETE"}:
+            for new_tag in {"POLITICIAN", "ACTOR", "WRITER", "MUSICIAN", "ATHLETE", "PAINTER", "ENTREPRENEUR"}:
                 if new_tag not in tags_for_search:
                     tags_for_search.append(new_tag)
         if tags_with_probas[0][1] == "COUNTRY" and (tags_with_probas[1][1] == "SPORTS_EVENT" or
@@ -815,7 +801,7 @@ class EntityLinker(Component, Serializable):
                                                   cur_types, cur_p641):
         p641_ent, p641_tr = set(), set()
         if (cur_substr_score == 1.0 and len(entity_substr.split()) > 1
-                and tags_for_search[0] in {"POLITICIAN", "ACTOR", "WRITER", "MUSICIAN", "ATHLETE", "PER"}) or \
+                and tags_for_search[0] in {"POLITICIAN", "ACTOR", "WRITER", "MUSICIAN", "ATHLETE", "PAINTER", "ENTREPRENEUR", "PER"}) or \
                 (len(entity_substr.split()) >= 3
                  and tags_for_search[0] in {"SPORTS_EVENT", "CHAMPIONSHIP", "SPORTS_SEASON"}):
             if cur_p641:
@@ -838,7 +824,7 @@ class EntityLinker(Component, Serializable):
         else:
             cand_ent_init = self.find_exact_match_pickle(entity_substr, tags_for_search, {"P641": cur_p641})
         total_cand_ent_init = {**cand_ent_init, **total_cand_ent_init}
-        if not total_cand_ent_init and entity_substr.startswith("the "):
+        if entity_substr.startswith("the "):
             entity_substr = entity_substr[4:]
             if self.db_format == "sqlite":
                 cand_ent_init = self.find_exact_match_sqlite(entity_substr, tags_for_search, {"P641": cur_p641})
@@ -854,7 +840,7 @@ class EntityLinker(Component, Serializable):
                 cand_ent_init = self.find_fuzzy_match_pickle(entity_substr_split, tags_for_search)
             total_cand_ent_init = {**cand_ent_init, **total_cand_ent_init}
         
-        if tags_for_search and tags_for_search[0] in {"POLITICIAN", "ACTOR", "WRITER", "MUSICIAN", "ATHLETE", "PER"}:
+        if tags_for_search and tags_for_search[0] in {"POLITICIAN", "ACTOR", "WRITER", "MUSICIAN", "ATHLETE", "PAINTER", "ENTREPRENEUR", "PER"}:
             for entity in total_cand_ent_init:
                 entities_scores = list(total_cand_ent_init[entity])
                 entities_scores = sorted(entities_scores, key=lambda x: (x[0], x[1]), reverse=True)
@@ -889,23 +875,28 @@ class EntityLinker(Component, Serializable):
     
     def make_query_str(self, entity_substr, tags=None, rels_dict=None):
         title_str = ""
+        make_query_flag = False
         if isinstance(entity_substr, str):
             entity_substr = entity_substr.replace('.', '').replace(',', '')
             if self.delete_hyphens:
-                entity_substr = entity_substr.replace("-", " ").replace("'", " ")
+                entity_substr = entity_substr.replace("-", " ").replace("'", " ").replace("&", "")
+            if len(entity_substr) > 1:
+                make_query_flag = True
             title_str = f"title:{entity_substr}"
         else:
             entity_substr = [elem.replace('.', '').replace(',', '') for elem in entity_substr]
-            entity_substr = [f"title:{elem}" for elem in entity_substr]
-            if len(entity_substr) == 2:
-                title_str = f"({' OR '.join(entity_substr)})"
-            elif len(entity_substr) > 2:
-                entity_lists = []
-                for i in range(len(entity_substr) - 1):
-                    entity_lists.append(" AND ".join(entity_substr[i:i + 2]))
-                for i in range(len(entity_substr) - 2):
-                    entity_lists.append(" AND ".join([entity_substr[i], entity_substr[i + 2]]))
-                title_str = f"({' OR '.join(entity_lists)})"
+            if all([len(elem) > 0 for elem in entity_substr]):
+                entity_substr = [f"title:{elem}" for elem in entity_substr]
+                if len(entity_substr) == 2:
+                    title_str = f"({' OR '.join(entity_substr)})"
+                elif len(entity_substr) > 2:
+                    entity_lists = []
+                    for i in range(len(entity_substr) - 1):
+                        entity_lists.append(" AND ".join(entity_substr[i:i + 2]))
+                    for i in range(len(entity_substr) - 2):
+                        entity_lists.append(" AND ".join([entity_substr[i], entity_substr[i + 2]]))
+                    title_str = f"({' OR '.join(entity_lists)})"
+                make_query_flag = True
         rels_str = ""
         if rels_dict:
             rel_str_list = []
@@ -935,7 +926,7 @@ class EntityLinker(Component, Serializable):
         
         query_str = " AND ".join(query_str_list)
         
-        return query_str
+        return query_str, make_query_flag
     
     def process_cand_ent(self, cand_ent_init, entities_and_ids, entity_substr_split, tags):
         is_misc = False
@@ -966,9 +957,9 @@ class EntityLinker(Component, Serializable):
         if entity_substr:
             if self.tags_filename and not self.using_custom_db:
                 for tag in tags:
-                    query_str = self.make_query_str(entity_substr, None, rels_dict)
+                    query_str, make_query_flag = self.make_query_str(entity_substr, None, rels_dict)
                     log.info(f"query_str {query_str} entity_substr {entity_substr}")
-                    if tag.lower() in self.cursors:
+                    if tag.lower() in self.cursors and make_query_flag:
                         log.info(f"tag {tag}")
                         res = self.cursors[tag.lower()].execute(inv_index_query, (query_str,))
                         entities_and_ids = res.fetchall()
@@ -976,30 +967,31 @@ class EntityLinker(Component, Serializable):
                             cand_ent_init = self.process_cand_ent(cand_ent_init, entities_and_ids,
                                                                   entity_substr_split, [tag])
             else:
-                query_str = self.make_query_str(entity_substr, tags, rels_dict)
+                query_str, make_query_flag = self.make_query_str(entity_substr, tags, rels_dict)
                 log.info(f"query_str {query_str} entity_substr {entity_substr}")
-                res = self.cur.execute(inv_index_query, (query_str,))
-                entities_and_ids = res.fetchall()
-                if entities_and_ids:
-                    cand_ent_init = self.process_cand_ent(cand_ent_init, entities_and_ids, entity_substr_split, tags)
+                if make_query_flag:
+                    res = self.cur.execute(inv_index_query, (query_str,))
+                    entities_and_ids = res.fetchall()
+                    if entities_and_ids:
+                        cand_ent_init = self.process_cand_ent(cand_ent_init, entities_and_ids, entity_substr_split, tags)
         
         if rels_dict and not cand_ent_init:
             if self.tags_filename and not self.using_custom_db:
                 for tag in tags:
-                    query_str = self.make_query_str(entity_substr)
+                    query_str, make_query_flag = self.make_query_str(entity_substr)
                     log.info(f"query_str {query_str} entity_substr {entity_substr}")
-                    if tag.lower() in self.cursors:
+                    if tag.lower() in self.cursors and make_query_flag:
                         res = self.cursors[tag.lower()].execute(inv_index_query, (query_str,))
                         entities_and_ids = res.fetchall()
                         if entities_and_ids:
                             cand_ent_init = self.process_cand_ent(cand_ent_init, entities_and_ids,
                                                                   entity_substr_split, [tag])
             else:
-                query_str = self.make_query_str(entity_substr, tags)
+                query_str, make_query_flag = self.make_query_str(entity_substr, tags)
                 log.info(f"query_str {query_str} entity_substr {entity_substr}")
                 res = self.cur.execute(inv_index_query, (query_str,))
                 entities_and_ids = res.fetchall()
-                if entities_and_ids:
+                if entities_and_ids and make_query_flag:
                     cand_ent_init = self.process_cand_ent(cand_ent_init, entities_and_ids, entity_substr_split, tags)
         
         return cand_ent_init
