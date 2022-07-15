@@ -97,11 +97,11 @@
       "DOWNLOADS_PATH": "{ROOT_PATH}/downloads",
       "MODELS_PATH": "{ROOT_PATH}/models",
       "TRANSFORMER": "bert-base-cased",
-      "MODEL_PATH": "{MODELS_PATH}/wiki_entity_detection_more_data"
+      "MODEL_PATH": "{MODELS_PATH}/wiki_entity_detection_bert_full"
     },
     "download": [
       {
-        "url": "http://files.deeppavlov.ai/deeppavlov_data/entity_linking/wiki_entity_detection_more_data.tar.gz",
+        "url": "http://files.deeppavlov.ai/deeppavlov_data/entity_linking/wiki_entity_detection_bert_full.tar.gz",
         "subdir": "{MODEL_PATH}"
       }
     ]

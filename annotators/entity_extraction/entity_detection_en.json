@@ -12,7 +12,7 @@
         "out": ["x_chunk", "chunk_nums", "chunk_sentences_offsets", "chunk_sentences"]
       },
       {
-        "thres_proba": 0.05,
+        "thres_proba": 0.81,
         "o_tag": "O",
         "tags_file": "{NER_PATH}/tag.dict",
         "return_entities_with_tags": true,
@@ -37,7 +37,7 @@
       "MODELS_PATH": "{ROOT_PATH}/models",
       "CONFIGS_PATH": "{DEEPPAVLOV_PATH}/configs",
       "TRANSFORMER": "bert-base-cased",
-      "NER_PATH": "{MODELS_PATH}/wiki_entity_detection_more_data"
+      "NER_PATH": "{MODELS_PATH}/wiki_entity_detection_bert_full"
     }
   }
 }

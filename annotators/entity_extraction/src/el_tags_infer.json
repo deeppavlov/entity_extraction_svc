@@ -45,10 +45,6 @@
       "MODEL_PATH": "{MODELS_PATH}/el_tags_roberta"
       },
     "download": [
-      {
-        "url": "http://files.deeppavlov.ai/deeppavlov_data/entity_linking/el_tags_roberta.tar.gz",
-        "subdir": "{MODEL_PATH}"
-      }
     ]
   }
 }
