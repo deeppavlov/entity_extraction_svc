@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import List, Union, Optional, Literal
 
 import requests
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile
 from pydantic import BaseModel
 from starlette.middleware.cors import CORSMiddleware
 
@@ -366,5 +366,13 @@ async def parse_html(payload: HtmlParserAgentRequest):
         text = preprocess_html(payload.html, payload.parser_engine, **payload.parser_kwargs)
     elif payload.url:
         text = preprocess_url(payload.url, payload.parser_engine, **payload.parser_kwargs)
+
+    return text
+
+
+@app.post("/parse_html_file")
+async def parse_html_file(html_file: UploadFile):
+    contents = await html_file.read()
+    text = preprocess_html(contents, "trafilatura")
 
     return text

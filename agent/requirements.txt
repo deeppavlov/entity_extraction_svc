@@ -2,3 +2,4 @@ requests==2.27.1
 beautifulsoup4==4.11.1
 fastapi==0.75.2
 uvicorn[standard]==0.17.6
+python-multipart==0.0.5
