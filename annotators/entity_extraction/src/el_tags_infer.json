@@ -48,6 +48,10 @@
       {
         "url": "http://files.deeppavlov.ai/deeppavlov_data/entity_linking/el_tags_roberta.tar.gz",
         "subdir": "{MODEL_PATH}"
+      },
+      {
+        "url": "http://files.deeppavlov.ai/deeppavlov_data/entity_linking/roberta_base.tar.gz",
+        "subdir": "{TRANSFORMER}"
       }
     ]
   }
