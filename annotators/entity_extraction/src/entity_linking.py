@@ -20,6 +20,7 @@ from logging import getLogger
 from typing import List, Dict, Tuple, Union, Any
 from collections import defaultdict
 
+import kg_api.core.graph as graph
 import pymorphy2
 from nltk.corpus import stopwords
 from rapidfuzz import fuzz
@@ -198,7 +199,7 @@ class EntityLinker(Component, Serializable):
                                             p641_obj, triplets_str))
         self.conn.commit()
     
-    def parse_custom_database(self, elements_list, label_relation, type_relation, type_to_tag_dict):
+    def insert_data_into_database(self, labels_dict, types_dict, triplets_dict):
         self.using_custom_db = True
         if not self.tags_filename:
             self.conn.close()
@@ -212,31 +213,6 @@ class EntityLinker(Component, Serializable):
         self.conn = sqlite3.connect(str(self.load_path / f"custom_database{i}.db"), check_same_thread=False)
         self.cur = self.conn.cursor()
         self.cur.execute(create_table_query)
-        labels_dict = {}
-        triplets_dict = {}
-        types_dict = {}
-        for triplet in elements_list:
-            subj, rel, obj, *_ = triplet.strip().split("> ")
-            subj = subj.strip("<>")
-            rel = rel.strip("<>")
-            if obj.endswith(" ."):
-                obj = obj[:-2]
-            obj = obj.strip("<>").strip('"')
-            if rel == label_relation:
-                if obj in labels_dict:
-                    labels_dict[subj].append(obj)
-                else:
-                    labels_dict[subj] = [obj]
-            elif type_relation and rel == type_relation:
-                if obj in types_dict:
-                    types_dict[subj].append(obj)
-                else:
-                    types_dict[subj] = [obj]
-            else:
-                if obj in triplets_dict:
-                    triplets_dict[subj].append([rel, obj])
-                else:
-                    triplets_dict[subj] = [[rel, obj]]
         log.info(f"labels_dict {labels_dict}")
         for entity in labels_dict:
             num_rels = 0
@@ -264,6 +240,48 @@ class EntityLinker(Component, Serializable):
                 self.cur.execute(insert_entity_query, (entity_label.lower(), entity, num_rels, tag, "", "", "", "",
                                                        types_str, "", "", triplets_str))
         self.conn.commit()
+    
+    def parse_custom_database(self, elements_list, label_relation, type_relation, type_to_tag_dict):
+        labels_dict = {}
+        triplets_dict = {}
+        types_dict = {}
+        for triplet in elements_list:
+            subj, rel, obj, *_ = triplet.strip().split("> ")
+            subj = subj.strip("<>")
+            rel = rel.strip("<>")
+            if obj.endswith(" ."):
+                obj = obj[:-2]
+            obj = obj.strip("<>").strip('"')
+            if rel == label_relation:
+                if obj in labels_dict:
+                    labels_dict[subj].append(obj)
+                else:
+                    labels_dict[subj] = [obj]
+            elif type_relation and rel == type_relation:
+                if obj in types_dict:
+                    types_dict[subj].append(obj)
+                else:
+                    types_dict[subj] = [obj]
+            else:
+                if obj in triplets_dict:
+                    triplets_dict[subj].append([rel, obj])
+                else:
+                    triplets_dict[subj] = [[rel, obj]]
+
+        self.insert_data_into_database(labels_dict, types_dict, triplets_dict)
+    
+    def parse_custom_kg_svc(self):
+        labels_dict, types_dict, triplets_dict = {}, {}, {}
+        nodes_list = graph.search_nodes()
+        for nodes in nodes_list:
+            for node in nodes:
+                entity_id = node.id
+                labels = list(node.labels)
+                properties = node._properties
+                labels_dict[entity_id] = labels
+                entity_type = properties["type"]
+                types_dict[entity_id] = entity_type
+        self.insert_data_into_database(labels_dict, types_dict, triplets_dict)
 
     def __call__(self, entity_substr_batch: List[List[str]],
                        sentences_batch: List[List[str]] = None,
