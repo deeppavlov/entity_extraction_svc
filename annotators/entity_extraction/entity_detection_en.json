@@ -24,11 +24,12 @@
         "class_name": "src.ner_chunker:NerChunkModel",
         "ner": {"config_path": "src/wiki_entity_detection.json"},
         "ner_parser": "#edp",
+        "entity_ranker": {"config_path": "src/el_tags_infer.json"},
         "in": ["x", "x_chunk", "chunk_nums", "chunk_sentences_offsets", "chunk_sentences"],
-        "out": ["entity_substr", "init_entity_offsets", "entity_offsets", "entity_positions", "tags", "sentences_offsets", "sentences", "probas"]
+        "out": ["entity_substr", "init_entity_offsets", "entity_offsets", "entity_positions", "tags", "tags_with_probas", "sentences_offsets", "sentences", "probas"]
       }
     ],
-    "out": ["entity_substr", "init_entity_offsets", "entity_offsets", "entity_positions", "tags", "sentences_offsets", "sentences", "probas"]
+    "out": ["entity_substr", "init_entity_offsets", "entity_offsets", "entity_positions", "tags", "tags_with_probas", "sentences_offsets", "sentences", "probas"]
   },
   "metadata": {
     "variables": {

@@ -74,15 +74,15 @@ async def entity_extraction(payload: Payload):
     texts = payload.texts
     texts = add_stop_signs(texts)
     entity_info = {}
-    entity_substr, init_entity_offsets, entity_offsets, entity_positions, sentences_offsets, \
-        sentences = [[[] for _ in texts] for _ in range(6)]
+    entity_substr, init_entity_offsets, entity_offsets, entity_tags_with_probas, entity_positions, \
+        sentences_offsets, sentences = [[[] for _ in texts] for _ in range(7)]
     try:
         raw_entity_substr, raw_init_entity_offsets, raw_entity_offsets, raw_entity_positions, raw_tags, \
-            sentences_offsets, sentences, raw_probas = ner(texts)
+            raw_tags_with_probas, sentences_offsets, sentences, raw_probas = ner(texts)
     except Exception as e:
         logger.info(f"{type(e)} error in entity detection: {e}")
         raw_entity_substr, raw_init_entity_offsets, raw_entity_offsets, raw_entity_positions, raw_tags, \
-            sentences_offsets, sentences, raw_probas = [[[] for _ in texts] for _ in range(8)]
+            raw_tags_with_probas, sentences_offsets, sentences, raw_probas = [[[] for _ in texts] for _ in range(9)]
 
     logger.debug(f"NER raw_entity_substr {raw_entity_substr}")
     logger.debug(f"NER raw_init_entity_offsets {raw_init_entity_offsets}")
@@ -101,6 +101,7 @@ async def entity_extraction(payload: Payload):
                 entity_substr[batch_idx].append(raw_entity_substr[batch_idx][entity_idx])
                 init_entity_offsets[batch_idx].append(raw_init_entity_offsets[batch_idx][entity_idx])
                 entity_offsets[batch_idx].append(raw_entity_offsets[batch_idx][entity_idx])
+                entity_tags_with_probas[batch_idx].append(raw_tags_with_probas[batch_idx][entity_idx])
                 entity_positions[batch_idx].append(raw_entity_positions[batch_idx][entity_idx])
 
     entity_ids, entity_tags, entity_conf, entity_pages, image_links, categories, first_pars, dbpedia_types = \
@@ -114,7 +115,7 @@ async def entity_extraction(payload: Payload):
     elif el_config_name == "entity_linking_en_full.json":
         try:
             entity_ids, entity_tags, entity_conf, entity_pages, image_links, categories, first_pars, dbpedia_types = \
-                el(entity_substr, sentences, entity_offsets, sentences_offsets)
+                el(entity_substr, sentences, entity_offsets, entity_tags_with_probas, sentences_offsets)
             for i in range(len(entity_substr)):
                 for j in range(len(entity_substr[i])):
                     if entity_tags[i][j] == []:

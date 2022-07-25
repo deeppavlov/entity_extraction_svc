@@ -44,7 +44,6 @@ class EntityLinker(Component, Serializable):
     def __init__(self, load_path: str,
                  entities_database_filename: str = None,
                  num_entities_for_conn_ranking: int = 50,
-                 entity_ranker = None,
                  num_entities_to_return: int = 10,
                  max_text_len: int = 300,
                  lang: str = "ru",
@@ -79,7 +78,6 @@ class EntityLinker(Component, Serializable):
 
         Args:
             load_path: path to folder with inverted index files
-            entity_ranker: component deeppavlov.models.kbqa.rel_ranking_bert
             num_entities_for_conn_ranking: number of candidate entities for ranking using Wikidata KG
             ngram_range: char ngrams range for TfidfVectorizer
             num_entities_to_return: number of candidate entities for the substring which are returned
@@ -92,7 +90,6 @@ class EntityLinker(Component, Serializable):
         self.morph = pymorphy2.MorphAnalyzer()
         self.lemmatize = lemmatize
         self.entities_database_filename = entities_database_filename
-        self.entity_ranker = entity_ranker
         self.num_entities_for_conn_ranking = num_entities_for_conn_ranking
         self.num_entities_to_return = num_entities_to_return
         self.max_text_len = max_text_len
@@ -268,6 +265,7 @@ class EntityLinker(Component, Serializable):
     def __call__(self, entity_substr_batch: List[List[str]],
                        sentences_batch: List[List[str]] = None,
                        entity_offsets_batch: List[List[List[int]]] = None,
+                       tags_with_probas_batch: List[List[Tuple[str, int]]] = None,
                        sentences_offsets_batch: List[List[Tuple[int, int]]] = None):
         entity_substr_batch = [[entity_substr.lower() for entity_substr in entity_substr_list]
                                for entity_substr_list in entity_substr_batch]
@@ -300,8 +298,6 @@ class EntityLinker(Component, Serializable):
                 entity_offsets_batch[n] = entity_offsets_list
         
         log.info(f"text_batch {text_batch} entity_offsets_batch {entity_offsets_batch}")
-        # (proba, entity_tag)
-        tags_with_probas_batch = self.entity_ranker(text_batch, entity_offsets_batch, entity_substr_batch)
         entity_sent_batch = []
         for entity_offsets_list, sentences_offsets_list in zip(entity_offsets_batch, sentences_offsets_batch):
             entity_sent_list = []
@@ -879,7 +875,8 @@ class EntityLinker(Component, Serializable):
         if isinstance(entity_substr, str):
             entity_substr = entity_substr.replace('.', '').replace(',', '')
             if self.delete_hyphens:
-                entity_substr = entity_substr.replace("-", " ").replace("'", " ").replace("&", "")
+                for old_symb, new_symb in [("-", " "), ("'", " "), ("&", ""), ("/", " ")]:
+                    entity_substr = entity_substr.replace(old_symb, new_symb)
             if len(entity_substr) > 1:
                 make_query_flag = True
             title_str = f"title:{entity_substr}"
