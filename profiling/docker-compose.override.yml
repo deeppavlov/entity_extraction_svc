@@ -1,0 +1,14 @@
+services:
+  agent:
+    cap_add:
+      - SYS_PTRACE
+
+  entity-extraction:
+    cap_add:
+      - SYS_PTRACE
+
+  wiki-parser:
+    cap_add:
+      - SYS_PTRACE
+
+version: '3.7'
