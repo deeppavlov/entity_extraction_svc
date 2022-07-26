@@ -9,6 +9,10 @@ RUN apt-get -y update
 RUN apt-get install -y build-essential zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev wget llvm \
     libncurses5-dev libncursesw5-dev xz-utils libffi-dev liblzma-dev
 
+RUN apt-get -y update && \
+    apt-get install -y software-properties-common && \
+    apt-get update && apt-get install git -y
+
 RUN apt-get install -y sqlite3
 
 ARG NER_CONFIG
@@ -30,6 +34,11 @@ RUN pip install hdt==2.3
 
 COPY ./annotators/entity_extraction/requirements.txt /src/requirements.txt
 RUN pip install -r /src/requirements.txt
+
+RUN git clone https://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@github.com/deepmipt/custom_kg_svc.git
+RUN cd custom_kg_svc
+RUN git checkout versioner_user_friendly
+RUN pip install -e .
 
 COPY $SRC_DIR /src
 
