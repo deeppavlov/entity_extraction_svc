@@ -194,6 +194,11 @@ async def add_kb(payload: TripletsList):
         logger.info(f"------- ner {ner[1].ner[6].ent_thres}")
 
 
+@app.post("/parse_custom_kg")
+async def parse_custom_kg(payload):
+    el[0].parse_custom_kg_svc()
+
+
 @app.post("/train")
 async def model_training(fl: Optional[UploadFile] = File(None)):
     data_path = "''"

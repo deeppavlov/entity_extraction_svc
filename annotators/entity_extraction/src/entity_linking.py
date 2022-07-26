@@ -20,7 +20,7 @@ from logging import getLogger
 from typing import List, Dict, Tuple, Union, Any
 from collections import defaultdict
 
-import kg_api.core.graph as graph
+import deeppavlov_kg.core.graph as graph
 import pymorphy2
 from nltk.corpus import stopwords
 from rapidfuzz import fuzz
@@ -258,12 +258,12 @@ class EntityLinker(Component, Serializable):
                 else:
                     labels_dict[subj] = [obj]
             elif type_relation and rel == type_relation:
-                if obj in types_dict:
+                if subj in types_dict:
                     types_dict[subj].append(obj)
                 else:
                     types_dict[subj] = [obj]
             else:
-                if obj in triplets_dict:
+                if subj in triplets_dict:
                     triplets_dict[subj].append([rel, obj])
                 else:
                     triplets_dict[subj] = [[rel, obj]]
@@ -279,8 +279,24 @@ class EntityLinker(Component, Serializable):
                 labels = list(node.labels)
                 properties = node._properties
                 labels_dict[entity_id] = labels
-                entity_type = properties["type"]
+                if "type" in properties:
+                    entity_type = properties["type"]
+                elif "kind" in properties:
+                    entity_type = properties["kind"]
+                else:
+                    entity_type = ""
                 types_dict[entity_id] = entity_type
+
+        triplets = graph.search_relationships()
+        for triplet in triplets:
+            subj = triplet[0].get("Id")
+            rel = triplet[1].type
+            obj = triplet[4].get("Id")
+            if subj in triplets_dict:
+                triplets_dict[subj].append([rel, obj])
+            else:
+                triplets_dict[subj] = [[rel, obj]]
+
         self.insert_data_into_database(labels_dict, types_dict, triplets_dict)
 
     def __call__(self, entity_substr_batch: List[List[str]],
