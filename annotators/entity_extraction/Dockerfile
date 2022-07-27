@@ -38,8 +38,12 @@ RUN git clone https://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@github.com/deepmi
 WORKDIR /custom_kg_svc
 RUN git checkout versioner_user_friendly
 RUN pip install -e .
-ENV NEO4J_BOLT_URL="bolt://neo4j:neo4j@localhost:7687"
+
 ENV PYTHONPATH="${PYTHONPATH}:/custom_kg_svc"
+ENV NEO4J_USERNAME=neo4j
+ENV NEO4J_PASSWORD=neo4j
+ENV NEO4J_BOLT_URL="bolt://neo4j:neo4j@localhost:7687"
+ENV ONTOLOGY_FILE=""
 
 COPY $SRC_DIR /src
 
