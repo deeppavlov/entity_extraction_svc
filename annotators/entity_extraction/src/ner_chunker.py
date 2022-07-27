@@ -281,7 +281,21 @@ class NerChunkModel(Component):
                 entity_positions_batch.append(list(entity_positions_list))
                 tags_batch.append(list(tags_list))
                 probas_batch.append(list(probas_list))
-            tags_with_probas_batch = self.entity_ranker(text_batch, entity_offsets_batch, entity_substr_batch)
+
+            f_text_batch, f_entity_offsets_batch, f_entity_substr_batch, f_text_nums = [], [], [], []
+            for text_num, (text, entity_offsets_list, entity_substr_list) in \
+                    enumerate(zip(text_batch, entity_offsets_batch, entity_substr_batch)):
+                if entity_substr_list:
+                    f_text_batch.append(text)
+                    f_entity_offsets_batch.append(entity_offsets_list)
+                    f_entity_substr_batch.append(entity_substr_list)
+                    f_text_nums.append(text_num)
+            tags_with_probas_batch = [[[] for _ in entity_substr_list] for entity_substr_list in entity_substr_batch]
+            if f_text_batch:
+                f_tags_with_probas_batch = self.entity_ranker(f_text_batch, f_entity_offsets_batch, f_entity_substr_batch)
+                for text_num, f_tags_with_probas_list in zip(f_text_nums, f_tags_with_probas_batch):
+                    tags_with_probas_batch[text_num] = f_tags_with_probas_list
+
             entity_substr_batch_list.append(entity_substr_batch)
             tags_batch_list.append(tags_batch)
             entity_offsets_batch_list.append(entity_offsets_batch)
