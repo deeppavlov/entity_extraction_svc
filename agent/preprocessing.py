@@ -84,4 +84,4 @@ def parse_html_trafilatura(raw_html: Union[bytes, str], **kwargs):
     Returns:
         text content of the html
     """
-    return trafilatura.extract(raw_html, **kwargs)
+    return trafilatura.extract(raw_html, **kwargs) or ""
