@@ -1,4 +1,4 @@
-FROM tensorflow/tensorflow:1.15.2-gpu
+FROM tensorflow/tensorflow:latest-gpu
 
 RUN apt-key del 7fa2af80  && \
     rm -f /etc/apt/sources.list.d/cuda*.list && \
@@ -29,16 +29,17 @@ ENV INCLUDE_MISC=$INCLUDE_MISC
 ENV MISC_THRES=$MISC_THRES
 ENV PORT=$PORT
 
-RUN pip install pybind11==2.2.4
-RUN pip install hdt==2.3
+RUN pip install Cython
 
 COPY ./annotators/entity_extraction/requirements.txt /src/requirements.txt
 RUN pip install -r /src/requirements.txt
 
 RUN git clone https://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@github.com/deepmipt/custom_kg_svc.git
-RUN cd custom_kg_svc
+WORKDIR /custom_kg_svc
 RUN git checkout versioner_user_friendly
 RUN pip install -e .
+ENV NEO4J_BOLT_URL="bolt://neo4j:neo4j@localhost:7687"
+ENV PYTHONPATH="${PYTHONPATH}:/custom_kg_svc"
 
 COPY $SRC_DIR /src
 
