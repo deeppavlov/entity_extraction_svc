@@ -180,6 +180,7 @@ class TorchTransformersNerPreprocessor(Component):
                 tokens_subword.append('[UNK]')
                 startofword_markers.append(token_marker)
                 tags_subword.append(tag)
+                num_subw += 1
             else:
                 if do_masking and (random.random() < token_masking_prob):
                     tokens_subword.extend(['[MASK]'] * len(subwords))
@@ -190,13 +191,15 @@ class TorchTransformersNerPreprocessor(Component):
                 else:
                     startofword_markers.extend([token_marker] + [0] * (len(subwords) - 1))
                 tags_subword.extend([tag] + ['X'] * (len(subwords) - 1))
+                num_subw += len(subwords)
             
             new_tokens.append(token)
             new_offsets.append(offset)
-            num_subw += len(subwords)
             if num_subw >= 500:
                 break
-
+        out = open("texts.txt", 'a')
+        out.write(f"num_subw {num_subw} --- {len(tokens_subword)}"+'\n')
+        out.close()
         tokens_subword.append('[SEP]')
         startofword_markers.append(0)
         tags_subword.append('X')

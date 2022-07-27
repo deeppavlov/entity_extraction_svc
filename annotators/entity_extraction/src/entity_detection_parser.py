@@ -15,12 +15,16 @@
 from typing import List, Tuple, Union, Dict
 from collections import defaultdict
 
+import nltk
 import numpy as np
+from nltk.corpus import stopwords
 
 from deeppavlov.core.commands.utils import expand_path
 from deeppavlov.core.common.registry import register
 from deeppavlov.core.models.component import Component
 
+
+nltk.download('stopwords')
 
 @register('question_sign_checker')
 class QuestionSignChecker(Component):
@@ -81,6 +85,7 @@ class EntityDetectionParser(Component):
                 for ind in tag_ind:
                     self.tag_ind_dict[ind] = entity_tag
             self.tag_ind_dict[0] = self.o_tag
+        self.stopwords = set(stopwords.words("english"))
 
     def __call__(self, question_tokens_batch: List[List[str]], tokens_info_batch: List[List[List[float]]],
                        tokens_probas_batch: np.ndarray) -> \
@@ -99,6 +104,10 @@ class EntityDetectionParser(Component):
         positions_batch = []
         probas_batch = []
         for tokens, tokens_info, probas in zip(question_tokens_batch, tokens_info_batch, tokens_probas_batch):
+            if len(tokens) <= 3:
+                self.cur_thres_proba = 0.9
+            else:
+                self.cur_thres_proba = self.thres_proba
             tags, tag_probas = self.tags_from_probas(tokens, probas)
             entities, positions, entities_probas = self.entities_from_tags(tokens, tags, probas)
             entities_batch.append(entities)
@@ -119,7 +128,7 @@ class EntityDetectionParser(Component):
         tag_probas = []
         for token, proba in zip(tokens, probas):
             tag_num = np.argmax(proba)
-            if proba[0] < self.thres_proba:
+            if proba[0] < self.cur_thres_proba:
                 proba_list = list(proba)[1:]
                 tag_num = np.argmax(proba_list) + 1
             tags.append(self.tags_init[tag_num])
@@ -159,7 +168,7 @@ class EntityDetectionParser(Component):
                         entity = ' '.join(entity)
                         for old, new in replace_tokens:
                             entity = entity.replace(old, new)
-                        if entity:
+                        if entity and entity.lower() not in self.stopwords:
                             entities_dict[c_tag].append(entity)
                             entities_positions_dict[c_tag].append(entity_positions_dict[c_tag])
                             cur_probas = entity_probas_dict[c_tag]
@@ -178,7 +187,7 @@ class EntityDetectionParser(Component):
                     entity = ' '.join(entity)
                     for old, new in replace_tokens:
                         entity = entity.replace(old, new)
-                    if entity:
+                    if entity and entity.lower() not in self.stopwords:
                         entities_dict[c_tag].append(entity)
                         entities_positions_dict[c_tag].append(entity_positions_dict[c_tag])
                         cur_probas = entity_probas_dict[c_tag]
@@ -195,7 +204,7 @@ class EntityDetectionParser(Component):
                 entity = ' '.join(entity)
                 for old, new in replace_tokens:
                     entity = entity.replace(old, new)
-                if entity:
+                if entity and entity.lower() not in self.stopwords:
                     entities_dict[c_tag].append(entity)
                     entities_positions_dict[c_tag].append(entity_positions_dict[c_tag])
                     cur_probas = entity_probas_dict[c_tag]
