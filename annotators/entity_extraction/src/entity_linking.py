@@ -963,7 +963,7 @@ class EntityLinker(Component, Serializable):
                 for tag in tags:
                     query_str, make_query_flag = self.make_query_str(entity_substr, None, rels_dict)
                     log.info(f"query_str {query_str} entity_substr {entity_substr}")
-                    if tag.lower() in self.cursors and make_query_flag:
+                    if tag.lower() != "black" and tag.lower() in self.cursors and make_query_flag:
                         res = self.cursors[tag.lower()].execute(inv_index_query, (query_str,))
                         entities_and_ids = res.fetchall()
                         if entities_and_ids:
@@ -992,7 +992,7 @@ class EntityLinker(Component, Serializable):
                 for tag in tags:
                     query_str, make_query_flag = self.make_query_str(entity_substr)
                     log.info(f"query_str {query_str} entity_substr {entity_substr}")
-                    if tag.lower() in self.cursors and make_query_flag:
+                    if tag.lower() != "black" and tag.lower() in self.cursors and make_query_flag:
                         res = self.cursors[tag.lower()].execute(inv_index_query, (query_str,))
                         entities_and_ids = res.fetchall()
                         if entities_and_ids:
@@ -1090,6 +1090,7 @@ class EntityLinker(Component, Serializable):
     
     def find_fuzzy_match_sqlite(self, entity_substr_split, tags):
         cand_ent_init = defaultdict(set)
+        tags = [tag for tag in tags if tag.lower() != "black"]
         if self.tags_filename and not self.using_custom_db:
             for tag in tags:
                 entities_and_ids = []
