@@ -142,13 +142,14 @@ class EntityLinker(Component, Serializable):
                 lines = fl.readlines()
                 tags = []
                 for line in lines:
-                    tags.append(line.strip().split()[0])
+                    tags.append(" ".join(line.strip().split()[:-1]).replace(" ", "_"))
                 if "O" in tags:
                     tags.remove("O")
-                for tag in ["ACTOR", "ATHLETE", "MUSICIAN", "POLITICIAN", "WRITER", "POLITICIAN", "PAINTER", "ENTREPRENEUR"]:
+                for tag in ["ACTOR", "ATHLETE", "MUSICIAN", "POLITICIAN", "WRITER", "POLITICIAN", "PAINTER",
+                            "ENTREPRENEUR", "PERSON"]:
                     if tag in tags:
                         tags.remove(tag)
-                for tag in ["MISC", "PERSON"]:
+                for tag in ["MISC"]:
                     if tag not in tags:
                         tags.append(tag)
                 self.cursors = {}
@@ -963,7 +964,6 @@ class EntityLinker(Component, Serializable):
                     query_str, make_query_flag = self.make_query_str(entity_substr, None, rels_dict)
                     log.info(f"query_str {query_str} entity_substr {entity_substr}")
                     if tag.lower() in self.cursors and make_query_flag:
-                        log.info(f"tag {tag}")
                         res = self.cursors[tag.lower()].execute(inv_index_query, (query_str,))
                         entities_and_ids = res.fetchall()
                         if entities_and_ids:
