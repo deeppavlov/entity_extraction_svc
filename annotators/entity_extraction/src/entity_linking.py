@@ -384,6 +384,7 @@ class EntityLinker(Component, Serializable):
             for entity_substr, tag, cand_ent_scores in zip(entity_substr_list, substr_tags_list,
                                                            init_cand_ent_scores_list):
                 cand_ent_scores_init = sorted(cand_ent_scores, key=lambda x: (x[1][0], x[1][1]), reverse=True)
+                log.info(f"----- cand_ent_scores_init {cand_ent_scores_init}")
                 cand_ent_scores = cand_ent_scores_init[:self.num_entities_for_conn_ranking]
                 cand_ent_scores_list.append(cand_ent_scores)
                 cand_ent_scores_init_list.append(cand_ent_scores_init)
@@ -938,6 +939,8 @@ class EntityLinker(Component, Serializable):
             is_misc = True
         for cand_entity_title, cand_entity_id, cand_entity_rels, tag, page, descr, entity_title, name_or_alias, \
                 types, locations, types_of_sport, triplets_str in entities_and_ids:
+            if cand_entity_title.lower() == entity_title.lower():
+                name_or_alias = "name"
             if (is_misc and entity_title and entity_title[0].islower()) or not is_misc:
                 substr_score = self.calc_substr_score(cand_entity_id, cand_entity_title, entity_substr_split,
                                                       tags, name_or_alias)
