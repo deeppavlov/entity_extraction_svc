@@ -142,13 +142,14 @@ class EntityLinker(Component, Serializable):
                 lines = fl.readlines()
                 tags = []
                 for line in lines:
-                    tags.append(line.strip().split()[0])
+                    tags.append(" ".join(line.strip().split()[:-1]).replace(" ", "_"))
                 if "O" in tags:
                     tags.remove("O")
-                for tag in ["ACTOR", "ATHLETE", "MUSICIAN", "POLITICIAN", "WRITER", "POLITICIAN", "PAINTER", "ENTREPRENEUR"]:
+                for tag in ["ACTOR", "ATHLETE", "MUSICIAN", "POLITICIAN", "WRITER", "POLITICIAN", "PAINTER",
+                            "ENTREPRENEUR", "PERSON"]:
                     if tag in tags:
                         tags.remove(tag)
-                for tag in ["MISC", "PERSON"]:
+                for tag in ["MISC"]:
                     if tag not in tags:
                         tags.append(tag)
                 self.cursors = {}
@@ -383,6 +384,7 @@ class EntityLinker(Component, Serializable):
             for entity_substr, tag, cand_ent_scores in zip(entity_substr_list, substr_tags_list,
                                                            init_cand_ent_scores_list):
                 cand_ent_scores_init = sorted(cand_ent_scores, key=lambda x: (x[1][0], x[1][1]), reverse=True)
+                log.info(f"----- cand_ent_scores_init {cand_ent_scores_init}")
                 cand_ent_scores = cand_ent_scores_init[:self.num_entities_for_conn_ranking]
                 cand_ent_scores_list.append(cand_ent_scores)
                 cand_ent_scores_init_list.append(cand_ent_scores_init)
@@ -937,6 +939,8 @@ class EntityLinker(Component, Serializable):
             is_misc = True
         for cand_entity_title, cand_entity_id, cand_entity_rels, tag, page, descr, entity_title, name_or_alias, \
                 types, locations, types_of_sport, triplets_str in entities_and_ids:
+            if cand_entity_title.lower() == entity_title.lower():
+                name_or_alias = "name"
             if (is_misc and entity_title and entity_title[0].islower()) or not is_misc:
                 substr_score = self.calc_substr_score(cand_entity_id, cand_entity_title, entity_substr_split,
                                                       tags, name_or_alias)
@@ -962,8 +966,7 @@ class EntityLinker(Component, Serializable):
                 for tag in tags:
                     query_str, make_query_flag = self.make_query_str(entity_substr, None, rels_dict)
                     log.info(f"query_str {query_str} entity_substr {entity_substr}")
-                    if tag.lower() in self.cursors and make_query_flag:
-                        log.info(f"tag {tag}")
+                    if tag.lower() != "black" and tag.lower() in self.cursors and make_query_flag:
                         res = self.cursors[tag.lower()].execute(inv_index_query, (query_str,))
                         entities_and_ids = res.fetchall()
                         if entities_and_ids:
@@ -992,7 +995,7 @@ class EntityLinker(Component, Serializable):
                 for tag in tags:
                     query_str, make_query_flag = self.make_query_str(entity_substr)
                     log.info(f"query_str {query_str} entity_substr {entity_substr}")
-                    if tag.lower() in self.cursors and make_query_flag:
+                    if tag.lower() != "black" and tag.lower() in self.cursors and make_query_flag:
                         res = self.cursors[tag.lower()].execute(inv_index_query, (query_str,))
                         entities_and_ids = res.fetchall()
                         if entities_and_ids:
@@ -1090,6 +1093,7 @@ class EntityLinker(Component, Serializable):
     
     def find_fuzzy_match_sqlite(self, entity_substr_split, tags):
         cand_ent_init = defaultdict(set)
+        tags = [tag for tag in tags if tag.lower() != "black"]
         if self.tags_filename and not self.using_custom_db:
             for tag in tags:
                 entities_and_ids = []
