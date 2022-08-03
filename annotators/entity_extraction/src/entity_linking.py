@@ -154,9 +154,10 @@ class EntityLinker(Component, Serializable):
                         tags.append(tag)
                 self.cursors = {}
                 for tag in tags:
-                    conn = sqlite3.connect(f"{self.load_path}/{tag.lower()}.db", check_same_thread=False)
-                    cur = conn.cursor()
-                    self.cursors[tag.lower()] = cur
+                    if tag.lower() != "black":
+                        conn = sqlite3.connect(f"{self.load_path}/{tag.lower()}.db", check_same_thread=False)
+                        cur = conn.cursor()
+                        self.cursors[tag.lower()] = cur
                 conn = sqlite3.connect(str(self.load_path / self.add_info_filename), check_same_thread=False)
                 self.add_info_cur = conn.cursor()
             else:
