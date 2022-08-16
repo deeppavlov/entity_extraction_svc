@@ -36,14 +36,11 @@ RUN pip install -r /src/requirements.txt
 
 RUN git clone https://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@github.com/deepmipt/custom_kg_svc.git
 WORKDIR /custom_kg_svc
-RUN git checkout versioner_user_friendly
 RUN pip install -e .
 
-ENV PYTHONPATH="${PYTHONPATH}:/custom_kg_svc"
+ENV PYTHONPATH="${PYTHONPATH}:/custom_kg_svc/deeppavlov_kg"
 ENV NEO4J_USERNAME=neo4j
 ENV NEO4J_PASSWORD=neo4j
-ENV NEO4J_BOLT_URL="bolt://neo4j:neo4j@localhost:7687"
-ENV ONTOLOGY_FILE=""
 
 COPY $SRC_DIR /src
 

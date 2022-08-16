@@ -21,10 +21,10 @@ from logging import getLogger
 from typing import List, Dict, Tuple, Union, Any
 from collections import defaultdict
 
-import deeppavlov_kg.core.graph as graph
 import pymorphy2
 from nltk.corpus import stopwords
 from rapidfuzz import fuzz
+from deeppavlov_kg import KnowledgeGraph
 
 from deeppavlov.core.common.registry import register
 from deeppavlov.core.models.component import Component
@@ -76,6 +76,10 @@ class EntityLinker(Component, Serializable):
                  tags_filename: str = None,
                  add_info_filename: str = None,
                  num_entities_for_bert_ranking: int = 10,
+                 ontology_url: str = "bolt://neo4j:neo4j@localhost:7687",
+                 ontology_kinds_hierarchy_path: str = "deeppavlov_kg/database/ontology_kinds_hierarchy.pickle",
+                 ontology_data_model_path: str = "deeppavlov_kg/database/ontology_data_model.json",
+                 db_ids_file_path: str = "deeppavlov_kg/database/db_ids.txt",
                  **kwargs) -> None:
         """
 
@@ -139,6 +143,10 @@ class EntityLinker(Component, Serializable):
         self.load()
         self.sum_tm = 0.0
         self.num_entities = 0
+        self.ontology_url = ontology_url
+        self.ontology_kinds_hierarchy_path = ontology_kinds_hierarchy_path
+        self.ontology_data_model_path = ontology_data_model_path
+        self.db_ids_file_path = db_ids_file_path
 
     def load(self) -> None:
         if self.db_format == "sqlite":
@@ -272,8 +280,14 @@ class EntityLinker(Component, Serializable):
         self.insert_data_into_database(labels_dict, types_dict, triplets_dict)
     
     def parse_custom_kg_svc(self):
+        self.graph = KnowledgeGraph(
+            self.ontology_url,
+            ontology_kinds_hierarchy_path=self.ontology_kinds_hierarchy_path,
+            ontology_data_model_path=self.ontology_data_model_path,
+            db_ids_file_path=self.db_ids_file_path
+        )
         labels_dict, types_dict, triplets_dict = {}, {}, {}
-        nodes_list = graph.search_nodes()
+        nodes_list = self.graph.search_nodes()
         for nodes in nodes_list:
             for node in nodes:
                 entity_id = node.id
@@ -288,7 +302,7 @@ class EntityLinker(Component, Serializable):
                     entity_type = ""
                 types_dict[entity_id] = entity_type
 
-        triplets = graph.search_relationships()
+        triplets = self.graph.search_relationships()
         for triplet in triplets:
             subj = triplet[0].get("Id")
             rel = triplet[1].type
