@@ -33,7 +33,7 @@ RUN pip install Cython
 
 COPY ./annotators/entity_extraction/requirements.txt /src/requirements.txt
 RUN pip install -r /src/requirements.txt
-RUN pip install git+https://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@github.com/deepmipt/custom_kg_svc.git
+RUN pip install git+https://github.com/deepmipt/custom_kg_svc
 
 ENV NEO4J_USERNAME=neo4j
 ENV NEO4J_PASSWORD=neo4j
