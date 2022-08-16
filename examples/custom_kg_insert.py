@@ -8,7 +8,6 @@ username = os.getlogin()
 path = f"/home/{username}/.deeppavlov/downloads/deeppavlov_kg/database"
 os.makedirs(path, exist_ok=True)
 
-# /archive/evseev/.deeppavlov/downloads/deeppavlov_kg
 graph = KnowledgeGraph(
     "bolt://neo4j:neo4j@localhost:7687",
     ontology_kinds_hierarchy_path=f"{path}/ontology_kinds_hierarchy.pickle",
