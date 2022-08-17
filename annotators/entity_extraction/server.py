@@ -68,6 +68,13 @@ class TripletsList(BaseModel):
     triplets: List[str]
 
 
+class CustomKGInfo(BaseModel):
+    db_url: str
+    ontology_kinds_hierarchy_path: str
+    ontology_data_model_path: str
+    db_ids_file_path: str
+
+
 @app.post("/entity_extraction")
 async def entity_extraction(payload: Payload):
     st_time = time.time()
@@ -195,8 +202,12 @@ async def add_kb(payload: TripletsList):
 
 
 @app.post("/parse_custom_kg")
-async def parse_custom_kg(payload):
-    el[0].parse_custom_kg_svc()
+async def parse_custom_kg(payload: CustomKGInfo):
+    db_url = payload.db_url
+    ontology_kinds_hierarchy_path = payload.ontology_kinds_hierarchy_path
+    ontology_data_model_path = payload.ontology_data_model_path
+    db_ids_file_path = payload.db_ids_file_path
+    el[0].parse_custom_kg_svc(db_url, ontology_kinds_hierarchy_path, ontology_data_model_path, db_ids_file_path)
 
 
 @app.post("/train")
