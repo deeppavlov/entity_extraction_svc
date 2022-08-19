@@ -197,9 +197,6 @@ class TorchTransformersNerPreprocessor(Component):
             new_offsets.append(offset)
             if num_subw >= 500:
                 break
-        out = open("texts.txt", 'a')
-        out.write(f"num_subw {num_subw} --- {len(tokens_subword)}"+'\n')
-        out.close()
         tokens_subword.append('[SEP]')
         startofword_markers.append(0)
         tags_subword.append('X')
