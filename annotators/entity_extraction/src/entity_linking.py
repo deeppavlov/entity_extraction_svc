@@ -402,7 +402,7 @@ class EntityLinker(Component, Serializable):
                 conf_list.append(conf)
                 pages_list.append(pages)
             if self.use_connections:
-                tm1 = time.time()
+                tm_st = time.time()
                 entities_with_conn_scores_list, entities_scores_list = \
                     self.rank_by_connections(entity_substr_list, substr_tags_list, entity_sent_list,
                                              cand_ent_scores_list, entities_scores_list)

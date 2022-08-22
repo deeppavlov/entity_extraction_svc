@@ -20,7 +20,7 @@
         "load_path": "{MODEL_PATH}/model",
         "encoder_save_path": "{MODEL_PATH}/encoder",
         "model_name": "siamese_ranking_el_model",
-        "n_tags": 49,
+        "n_tags": 48,
         "pretrained_bert": "{TRANSFORMER}",
         "emb_size": 768,
         "learning_rate_drop_patience": 10,
@@ -30,7 +30,7 @@
       {
         "class_name": "src.torch_transformers_preprocessor:TorchTransformersElTagPostprocessor",
         "tags_file": "{MODEL_PATH}/tag.dict",
-        "in": ["probas"],
+        "in": ["probas", "entity_substr"],
         "out": ["tags_with_probas"]
       }
     ],
@@ -42,11 +42,11 @@
       "DOWNLOADS_PATH": "{ROOT_PATH}/downloads",
       "MODELS_PATH": "{ROOT_PATH}/models",
       "TRANSFORMER": "{DOWNLOADS_PATH}/torch_bert_models/roberta_base",
-      "MODEL_PATH": "{MODELS_PATH}/el_tags_roberta"
+      "MODEL_PATH": "{MODELS_PATH}/el_tags_roberta_new"
       },
     "download": [
       {
-        "url": "http://files.deeppavlov.ai/deeppavlov_data/entity_linking/el_tags_roberta.tar.gz",
+        "url": "http://files.deeppavlov.ai/deeppavlov_data/entity_linking/el_tags_roberta_new.tar.gz",
         "subdir": "{MODEL_PATH}"
       },
       {
