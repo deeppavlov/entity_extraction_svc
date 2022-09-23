@@ -523,7 +523,7 @@ class TorchTransformersElTagPostprocessor(Component):
             for line in lines:
                 self.tags_list.append(line.strip().split()[0])
     
-    def __call__(self, probas_batch):
+    def __call__(self, probas_batch, entity_substr_batch):
         ent_tag_proba_batch = []
         for probas_list in probas_batch:
             ent_tag_proba_list = []
