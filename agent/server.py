@@ -1,9 +1,12 @@
+import json
 import logging
 from datetime import datetime
-from typing import List, Union, Optional, Literal
+from uuid import uuid4
+from typing import List, Union, Optional, Literal, Callable
 
 import requests
-from fastapi import FastAPI, HTTPException, UploadFile
+from fastapi import FastAPI, HTTPException, UploadFile, APIRouter, Request, Response
+from fastapi.routing import APIRoute
 from pydantic import BaseModel
 from starlette.middleware.cors import CORSMiddleware
 
@@ -13,6 +16,7 @@ from agent.constants import (
     WIKIPEDIA_FILE_URI_PREFIX,
 )
 from agent import preprocessing
+from agent.stats_db import StatsDatabase
 
 
 logging.basicConfig(
@@ -20,7 +24,26 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
+class LoggedStatisticsRoute(APIRoute):
+    def get_route_handler(self) -> Callable:
+        original_route_handler = super().get_route_handler()
+
+        async def custom_route_handler(request: Request) -> Response:
+            # start_time = time.time()
+            session_id = uuid4()
+            await stats_db.save_request(session_id, await request.json())
+            response = await original_route_handler(request)
+            await stats_db.save_response(session_id, json.loads(response.body))
+            # process_time = time.time() - start_time
+            return response
+
+        return custom_route_handler
+
+
 app = FastAPI()
+api_router = APIRouter(route_class=LoggedStatisticsRoute)
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -317,9 +340,17 @@ def unpack_entity_extraction_service_response(
 
 
 server_settings = ServerSettings()
+stats_db = StatsDatabase(
+    server_settings.stats_db_username,
+    server_settings.stats_db_password,
+    server_settings.stats_db_host,
+    server_settings.stats_db_port,
+    server_settings.stats_db_name,
+    auth_database=server_settings.stats_db_auth_database,
+)
 
 
-@app.post("/")
+@api_router.post("/")
 async def extract(payload: EntityExtractionAgentRequest):
     text = ""
     n_main_args = sum(int(bool(pl_value)) for pl_value in [payload.text, payload.html, payload.url])
@@ -356,7 +387,7 @@ async def extract(payload: EntityExtractionAgentRequest):
     return entities.dict(exclude=exclude)
 
 
-@app.post("/parse_html")
+@api_router.post("/parse_html")
 async def parse_html(payload: HtmlParserAgentRequest):
     text = ""
 
@@ -370,9 +401,12 @@ async def parse_html(payload: HtmlParserAgentRequest):
     return text
 
 
-@app.post("/parse_html_file")
+@api_router.post("/parse_html_file")
 async def parse_html_file(html_file: UploadFile):
     contents = await html_file.read()
     text = preprocess_html(contents, "trafilatura")
 
     return text
+
+
+app.include_router(api_router)

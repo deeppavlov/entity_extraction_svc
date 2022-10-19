@@ -2,7 +2,7 @@ services:
   agent:
     env_file: [.env]
     environment:
-      WAIT_HOSTS: "entity-extraction:9103, wiki-parser:9077"
+      WAIT_HOSTS: "stats-db:27017, entity-extraction:9103, wiki-parser:9077"
       WAIT_HOSTS_TIMEOUT: ${WAIT_TIMEOUT:-480}
     build:
       args:
@@ -21,21 +21,28 @@ services:
         reservations:
           memory: 64M
 
+  stats-db:
+    image: bitnami/mongodb:latest
+    env_file:
+      - mongo.env
+    ports:
+      - 27017:27017
+
   entity-extraction:
     build:
       args:
         NER_CONFIG: entity_detection_en.json
         EL_CONFIG: entity_linking_en_full.json
         PORT: 9103
-        SRC_DIR: annotators/entity_extraction/
+        SRC_DIR: annotators/entity_extraction_base/
         INCLUDE_MISC: 1
         MISC_THRES: 0.88
       context: ./
-      dockerfile: annotators/entity_extraction/Dockerfile
+      dockerfile: annotators/entity_extraction_base/Dockerfile
     ports:
       - 9103:9103
     volumes:
-      - ./annotators/entity_extraction:/src
+      - ./annotators/entity_extraction_base:/src
       - ~/.deeppavlov:/root/.deeppavlov
     environment:
       - CUDA_VISIBLE_DEVICES=''
