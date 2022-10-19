@@ -7,6 +7,7 @@ ENV PORT=$PORT
 
 COPY ./agent/requirements.txt /src/requirements.txt
 RUN pip install -r /src/requirements.txt
+RUN pip install -U trafilatura[all]
 
 COPY $SRC_DIR /src/$SRC_DIR
 WORKDIR /src

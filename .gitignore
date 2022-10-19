@@ -131,3 +131,6 @@ stats.csv
 
 # Generated csv files
 *.csv
+
+# PyCharm files
+.idea

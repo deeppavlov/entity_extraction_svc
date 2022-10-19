@@ -18,7 +18,7 @@ LOCKFILE = DATA_PATH / 'lockfile'
 LOG_PATH = DATA_PATH / 'logs'
 LOG_PATH.mkdir(parents=True, exist_ok=True)
 metrics_filename = DATA_PATH / "metrics_score_history.csv"
-ner_config = parse_config("src/entity_detection_tinyroberta.json")
+ner_config = parse_config("src/wiki_entity_detection.json")
 logger = getLogger(__file__)
 
 
