@@ -15,12 +15,16 @@
 from typing import List, Tuple, Union, Dict
 from collections import defaultdict
 
+import nltk
 import numpy as np
+from nltk.corpus import stopwords
 
 from deeppavlov.core.commands.utils import expand_path
 from deeppavlov.core.common.registry import register
 from deeppavlov.core.models.component import Component
 
+
+nltk.download('stopwords')
 
 @register('question_sign_checker')
 class QuestionSignChecker(Component):
@@ -65,8 +69,10 @@ class EntityDetectionParser(Component):
         self.return_entities_with_tags = return_entities_with_tags
         self.thres_proba = thres_proba
         self.tag_ind_dict = {}
+        self.tags_init = []
         with open(str(expand_path(tags_file))) as fl:
             tags = [line.split('\t')[0] for line in fl.readlines()]
+            self.tags_init = tags
             if self.entity_tags is None:
                 self.entity_tags = list({tag.split('-')[1] for tag in tags if len(tag.split('-')) > 1}.difference({self.o_tag}))
             self.entity_tags = [elem for elem in self.entity_tags if elem not in not_used_tags]
@@ -79,6 +85,7 @@ class EntityDetectionParser(Component):
                 for ind in tag_ind:
                     self.tag_ind_dict[ind] = entity_tag
             self.tag_ind_dict[0] = self.o_tag
+        self.stopwords = set(stopwords.words("english"))
 
     def __call__(self, question_tokens_batch: List[List[str]], tokens_info_batch: List[List[List[float]]],
                        tokens_probas_batch: np.ndarray) -> \
@@ -97,7 +104,12 @@ class EntityDetectionParser(Component):
         positions_batch = []
         probas_batch = []
         for tokens, tokens_info, probas in zip(question_tokens_batch, tokens_info_batch, tokens_probas_batch):
-            entities, positions, entities_probas = self.entities_from_tags(tokens, tokens_info, probas)
+            if len(tokens) <= 3:
+                self.cur_thres_proba = 0.9
+            else:
+                self.cur_thres_proba = self.thres_proba
+            tags, tag_probas = self.tags_from_probas(tokens, probas)
+            entities, positions, entities_probas = self.entities_from_tags(tokens, tags, probas)
             entities_batch.append(entities)
             positions_batch.append(positions)
             probas_batch.append(entities_probas)
@@ -116,12 +128,10 @@ class EntityDetectionParser(Component):
         tag_probas = []
         for token, proba in zip(tokens, probas):
             tag_num = np.argmax(proba)
-            if tag_num in self.et_prob_ind:
-                if proba[tag_num] < self.thres_proba:
-                    tag_num = 0
-            else:
-                tag_num = 0
-            tags.append(self.tag_ind_dict[tag_num])
+            if proba[0] < self.cur_thres_proba:
+                proba_list = list(proba)[1:]
+                tag_num = np.argmax(proba_list) + 1
+            tags.append(self.tags_init[tag_num])
             tag_probas.append(proba[tag_num])
 
         return tags, tag_probas
@@ -158,7 +168,7 @@ class EntityDetectionParser(Component):
                         entity = ' '.join(entity)
                         for old, new in replace_tokens:
                             entity = entity.replace(old, new)
-                        if entity:
+                        if entity and entity.lower() not in self.stopwords:
                             entities_dict[c_tag].append(entity)
                             entities_positions_dict[c_tag].append(entity_positions_dict[c_tag])
                             cur_probas = entity_probas_dict[c_tag]
@@ -177,7 +187,7 @@ class EntityDetectionParser(Component):
                     entity = ' '.join(entity)
                     for old, new in replace_tokens:
                         entity = entity.replace(old, new)
-                    if entity:
+                    if entity and entity.lower() not in self.stopwords:
                         entities_dict[c_tag].append(entity)
                         entities_positions_dict[c_tag].append(entity_positions_dict[c_tag])
                         cur_probas = entity_probas_dict[c_tag]
@@ -194,7 +204,7 @@ class EntityDetectionParser(Component):
                 entity = ' '.join(entity)
                 for old, new in replace_tokens:
                     entity = entity.replace(old, new)
-                if entity:
+                if entity and entity.lower() not in self.stopwords:
                     entities_dict[c_tag].append(entity)
                     entities_positions_dict[c_tag].append(entity_positions_dict[c_tag])
                     cur_probas = entity_probas_dict[c_tag]

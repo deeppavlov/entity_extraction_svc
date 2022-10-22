@@ -1,27 +1,15 @@
 {
   "chainer": {
-    "in": ["entity_substr", "tags", "sentences", "entity_offsets", "sentences_offsets", "probas"],
+    "in": ["entity_substr", "sentences", "entity_offsets", "entity_tags_with_probas", "sentences_offsets"],
     "pipe": [
       {
-        "class_name": "src.torch_transformers_el_ranker:TorchTransformersEntityRankerInfer",
-        "id": "entity_descr_ranking",
-        "pretrained_bert": "{TRANSFORMER}",
-        "text_encoder_weights_path": "{MODELS_PATH}/siamese_distilbert_biencoder/text_encoder.pth.tar",
-        "descr_encoder_weights_path": "{MODELS_PATH}/siamese_distilbert_biencoder/descr_encoder.pth.tar",
-        "bilinear_weights_path": "{MODELS_PATH}/siamese_distilbert_biencoder/bilinear.pth.tar",
-        "special_token_id": 30522,
-        "emb_size": 512,
-        "block_size": 8
-      },
-      {
         "class_name": "src.entity_linking:EntityLinker",
-        "in": ["entity_substr", "tags", "sentences", "entity_offsets", "sentences_offsets", "probas"],
+        "in": ["entity_substr", "sentences", "entity_offsets", "entity_tags_with_probas", "sentences_offsets"],
         "out": ["entity_ids", "entity_tags", "entity_conf", "entity_pages", "image_links", "categories", "first_pars", "dbpedia_types"],
-        "load_path": "{DOWNLOADS_PATH}/entity_linking_eng/el_eng_kg_04.2022_ontonotes",
+        "load_path": "{DOWNLOADS_PATH}/entity_linking_eng/el_eng_kg_48types_new",
         "occ_labels_filename": "{DOWNLOADS_PATH}/entity_linking_eng/occ_labels.pickle",
         "add_info_filename": "add_info.db",
-        "tags_filename": "{MODELS_PATH}/ner_ontonotes_bert_torch_crf/tag.dict",
-        "entity_descr_ranker": "#entity_descr_ranking",
+        "tags_filename": "{MODELS_PATH}/el_tags_roberta_new/tag.dict",
         "rank_in_runtime": true,
         "num_entities_for_conn_ranking": 30,
         "include_mention": false,
@@ -51,7 +39,7 @@
     },
     "download": [
       {
-        "url": "http://files.deeppavlov.ai/deeppavlov_data/entity_linking/el_eng_kg_04.2022_ontonotes_files.tar.gz",
+        "url": "http://files.deeppavlov.ai/deeppavlov_data/entity_linking/el_eng_kg_48types_files_new.tar.gz",
         "subdir": "{DOWNLOADS_PATH}/entity_linking_eng"
       },
       {
