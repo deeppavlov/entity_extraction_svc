@@ -34,7 +34,7 @@ app.add_middleware(
 ner_config_name = os.getenv("NER_CONFIG")
 el_config_name = os.getenv("EL_CONFIG")
 include_misc = bool(int(os.getenv("INCLUDE_MISC", "0")))
-misc_thres = float(os.getenv("MISC_THRES", "0.88"))
+punct_restore = int(os.getenv("PUNCT_RESTORE", "0"))
 
 ner_config = parse_config(ner_config_name)
 
@@ -45,6 +45,29 @@ try:
 except Exception as e:
     logger.exception(e)
     raise e
+
+
+def punct_restore_process(tokens_batch, tags_batch):
+    proc_texts = []
+    for tokens, tags in zip(tokens_batch, tags_batch):
+        proc_tokens = []
+        for token, tag in zip(tokens, tags):
+            if tag == "COMMA":
+                proc_tokens.append(f"{token},")
+            elif tag == "DOT":
+                proc_tokens.append(f"{token}.")
+            elif tag == "Q":
+                proc_tokens.append(f"{token}?")
+            else:
+                proc_tokens.append(token)
+
+        proc_text = " ".join(proc_tokens)
+        proc_texts.append(proc_text)
+    return proc_texts
+
+
+if punct_restore:
+    punct_restore_model = build_model("src/punct_restore_eng.json")
 
 
 def add_stop_signs(texts):
@@ -72,6 +95,11 @@ class TripletsList(BaseModel):
 async def entity_extraction(payload: Payload):
     st_time = time.time()
     texts = payload.texts
+    if punct_restore:
+        tokens, tags = punct_restore_model(texts)
+        if tags and isinstance(tags[0], str):
+            tags = [tags]
+        texts = punct_restore_process(tokens, tags)
     texts = add_stop_signs(texts)
     entity_info = {}
     entity_substr, init_entity_offsets, entity_offsets, entity_tags_with_probas, entity_positions, \

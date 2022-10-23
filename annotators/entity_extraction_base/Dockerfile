@@ -15,6 +15,7 @@ ARG NER_CONFIG
 ARG EL_CONFIG
 ARG INCLUDE_MISC
 ARG MISC_THRES
+ARG PUNCT_RESTORE
 ARG PORT
 ARG SRC_DIR
 ARG SED_ARG=" | "
@@ -22,13 +23,13 @@ ARG SED_ARG=" | "
 ENV NER_CONFIG=$NER_CONFIG
 ENV EL_CONFIG=$EL_CONFIG
 ENV INCLUDE_MISC=$INCLUDE_MISC
-ENV MISC_THRES=$MISC_THRES
 ENV PORT=$PORT
+ENV PUNCT_RESTORE=$PUNCT_RESTORE
 
 RUN pip install pybind11==2.2.4
 RUN pip install hdt==2.3
 
-COPY ./annotators/entity_extraction/requirements.txt /src/requirements.txt
+COPY ./annotators/entity_extraction_base/requirements.txt /src/requirements.txt
 RUN pip install -r /src/requirements.txt
 
 COPY $SRC_DIR /src
