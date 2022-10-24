@@ -34,13 +34,17 @@ app.add_middleware(
 ner_config_name = os.getenv("NER_CONFIG")
 el_config_name = os.getenv("EL_CONFIG")
 include_misc = bool(int(os.getenv("INCLUDE_MISC", "0")))
-punct_restore = int(os.getenv("PUNCT_RESTORE", "0"))
+test_mode = int(os.getenv("TEST_MODE", "0"))
 
 ner_config = parse_config(ner_config_name)
+el_config = parse_config(el_config_name)
+
+if test_mode:
+    el_config["chainer"]["pipe"][0]["test_mode"] = True
 
 try:
     ner = build_model(ner_config, download=True)
-    el = build_model(el_config_name, download=True)
+    el = build_model(el_config, download=True)
     logger.info("model loaded")
 except Exception as e:
     logger.exception(e)
@@ -66,7 +70,7 @@ def punct_restore_process(tokens_batch, tags_batch):
     return proc_texts
 
 
-if punct_restore:
+if test_mode:
     punct_restore_model = build_model("src/punct_restore_eng.json")
 
 
@@ -95,7 +99,7 @@ class TripletsList(BaseModel):
 async def entity_extraction(payload: Payload):
     st_time = time.time()
     texts = payload.texts
-    if punct_restore:
+    if test_mode:
         tokens, tags = punct_restore_model(texts)
         if tags and isinstance(tags[0], str):
             tags = [tags]
@@ -112,11 +116,11 @@ async def entity_extraction(payload: Payload):
         raw_entity_substr, raw_init_entity_offsets, raw_entity_offsets, raw_entity_positions, raw_tags, \
             raw_tags_with_probas, sentences_offsets, sentences, raw_probas = [[[] for _ in texts] for _ in range(9)]
 
-    logger.debug(f"NER raw_entity_substr {raw_entity_substr}")
-    logger.debug(f"NER raw_init_entity_offsets {raw_init_entity_offsets}")
-    logger.debug(f"NER raw_entity_offsets {raw_entity_offsets}")
-    logger.debug(f"NER raw_entity_positions {raw_entity_positions}")
-    logger.debug(f"NER raw_tags {raw_tags}")
+    logger.info(f"NER raw_entity_substr {raw_entity_substr}")
+    logger.info(f"NER raw_init_entity_offsets {raw_init_entity_offsets}")
+    logger.info(f"NER raw_entity_offsets {raw_entity_offsets}")
+    logger.info(f"NER raw_entity_positions {raw_entity_positions}")
+    logger.info(f"NER raw_tags {raw_tags}")
     logger.debug(f"NER sentences_offsets {sentences_offsets}")
     logger.debug(f"NER sentences {sentences}")
     logger.debug(f"NER raw_probas {raw_probas}")
