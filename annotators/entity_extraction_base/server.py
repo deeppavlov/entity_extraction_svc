@@ -40,6 +40,7 @@ ner_config = parse_config(ner_config_name)
 el_config = parse_config(el_config_name)
 
 if test_mode:
+    ner_config["chainer"]["pipe"][1]["thres_proba"] = 0.95
     el_config["chainer"]["pipe"][0]["test_mode"] = True
 
 try:
