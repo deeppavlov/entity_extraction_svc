@@ -40,8 +40,10 @@ ner_config = parse_config(ner_config_name)
 el_config = parse_config(el_config_name)
 
 if test_mode:
-    ner_config["chainer"]["pipe"][1]["thres_proba"] = 0.95
+    ner_config["chainer"]["pipe"][1]["thres_proba"] = 0.99
+    ner_config["chainer"]["pipe"][1]["test_mode"] = True
     el_config["chainer"]["pipe"][0]["test_mode"] = True
+    el_config["chainer"]["pipe"][0]["num_entities_for_conn_ranking"] = 50
 
 try:
     ner = build_model(ner_config, download=True)

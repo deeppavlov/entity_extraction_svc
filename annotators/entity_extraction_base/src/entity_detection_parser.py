@@ -51,7 +51,7 @@ class EntityDetectionParser(Component):
 
     def __init__(self, o_tag: str, tags_file: str, entity_tags: List[str] = None, not_used_tags: List[str] = None,
                  ignore_points: bool = False, return_entities_with_tags: bool = False, thres_proba: float = 0.8,
-                 **kwargs):
+                 test_mode: bool = False, **kwargs):
         """
         Args:
             entity_tags: tags for entities
@@ -70,6 +70,7 @@ class EntityDetectionParser(Component):
         self.thres_proba = thres_proba
         self.tag_ind_dict = {}
         self.tags_init = []
+        self.test_mode = test_mode
         with open(str(expand_path(tags_file))) as fl:
             tags = [line.split('\t')[0] for line in fl.readlines()]
             self.tags_init = tags
@@ -165,10 +166,17 @@ class EntityDetectionParser(Component):
                 f_tag = tag.split("-")[-1]
                 if tag.startswith("B-") and any(entity_dict.values()):
                     for c_tag, entity in entity_dict.items():
+                        while True:
+                            if entity and entity[-1] == ",":
+                                entity = entity[:-1]
+                                entity_positions_dict[c_tag] = entity_positions_dict[c_tag][:-1]
+                            else:
+                                break
                         entity = ' '.join(entity)
                         for old, new in replace_tokens:
                             entity = entity.replace(old, new)
-                        if entity and entity.lower() not in self.stopwords:
+                        if entity and entity.lower() not in self.stopwords and not (entity.isdigit() and len(entity) < 3) \
+                                and (self.test_mode or (not self.test_mode and len(entity) > 2)):
                             entities_dict[c_tag].append(entity)
                             entities_positions_dict[c_tag].append(entity_positions_dict[c_tag])
                             cur_probas = entity_probas_dict[c_tag]
@@ -184,10 +192,17 @@ class EntityDetectionParser(Component):
             elif any(entity_dict.values()):
                 for tag, entity in entity_dict.items():
                     c_tag = tag.split("-")[-1]
+                    while True:
+                        if entity and entity[-1] == ",":
+                            entity = entity[:-1]
+                            entity_positions_dict[c_tag] = entity_positions_dict[c_tag][:-1]
+                        else:
+                            break
                     entity = ' '.join(entity)
                     for old, new in replace_tokens:
                         entity = entity.replace(old, new)
-                    if entity and entity.lower() not in self.stopwords:
+                    if entity and entity.lower() not in self.stopwords and not (entity.isdigit() and len(entity) < 3) \
+                            and (self.test_mode or (not self.test_mode and len(entity) > 2)):
                         entities_dict[c_tag].append(entity)
                         entities_positions_dict[c_tag].append(entity_positions_dict[c_tag])
                         cur_probas = entity_probas_dict[c_tag]
@@ -201,10 +216,17 @@ class EntityDetectionParser(Component):
         if any(entity_dict.values()):
             for tag, entity in entity_dict.items():
                 c_tag = tag.split("-")[-1]
+                while True:
+                    if entity and entity[-1] == ",":
+                        entity = entity[:-1]
+                        entity_positions_dict[c_tag] = entity_positions_dict[c_tag][:-1]
+                    else:
+                        break
                 entity = ' '.join(entity)
                 for old, new in replace_tokens:
                     entity = entity.replace(old, new)
-                if entity and entity.lower() not in self.stopwords:
+                if entity and entity.lower() not in self.stopwords and not (entity.isdigit() and len(entity) < 3) \
+                        and (self.test_mode or (not self.test_mode and len(entity) > 2)):
                     entities_dict[c_tag].append(entity)
                     entities_positions_dict[c_tag].append(entity_positions_dict[c_tag])
                     cur_probas = entity_probas_dict[c_tag]

@@ -73,6 +73,7 @@ class EntityLinker(Component, Serializable):
                  tags_filename: str = None,
                  add_info_filename: str = None,
                  num_entities_for_bert_ranking: int = 10,
+                 test_mode: bool = False,
                  **kwargs) -> None:
         """
 
@@ -131,6 +132,7 @@ class EntityLinker(Component, Serializable):
         self.tags_filename = tags_filename
         self.add_info_filename = add_info_filename
         self.num_entities_for_bert_ranking = num_entities_for_bert_ranking
+        self.test_mode = test_mode
         self.load()
         self.sum_tm = 0.0
         self.num_entities = 0
@@ -382,16 +384,21 @@ class EntityLinker(Component, Serializable):
                 substr_tags_list.append(entity_tags_dict[n])
 
             entities_types_dict = {}
+            locations_dict = {}
             for entity_substr, tag, cand_ent_scores in zip(entity_substr_list, substr_tags_list,
                                                            init_cand_ent_scores_list):
                 cand_ent_scores_init = sorted(cand_ent_scores, key=lambda x: (x[1][0], x[1][1]), reverse=True)
-                log.info(f"----- cand_ent_scores_init {cand_ent_scores_init}")
+                log.info(f"----- cand_ent_scores_init {cand_ent_scores_init[:2]}")
                 cand_ent_scores = cand_ent_scores_init[:self.num_entities_for_conn_ranking]
                 cand_ent_scores_list.append(cand_ent_scores)
                 cand_ent_scores_init_list.append(cand_ent_scores_init)
                 entity_ids = [elem[0] for elem in cand_ent_scores]
                 conf = [elem[1][:2] for elem in cand_ent_scores]
                 pages = [elem[1][2] for elem in cand_ent_scores]
+                locations = [elem[1][5] for elem in cand_ent_scores]
+                for entity_id, location in zip(entity_ids, locations):
+                    if location:
+                        locations_dict[entity_id] = location
                 entities_scores_list.append({ent: score for ent, score in cand_ent_scores})
                 for ent, scores in cand_ent_scores_init:
                     if isinstance(scores[3], str):
@@ -409,7 +416,7 @@ class EntityLinker(Component, Serializable):
                 
                 entity_ids_list, pages_list, entity_tags_list, conf_list, wiki_types_list = self.postprocess_entities(entity_substr_list,
                     entity_substr_split_list, entity_offsets_list, substr_tags_list, entity_sent_list, entities_with_conn_scores_list,
-                    entities_types_dict, sentences_list, sentences_offsets_list)
+                    entities_types_dict, sentences_list, sentences_offsets_list, locations_dict)
                 
         return entity_ids_list, substr_tags_list, conf_list, entity_tags_list, pages_list, wiki_types_list
     
@@ -430,8 +437,8 @@ class EntityLinker(Component, Serializable):
                                     tags_with_probas_list, sentences_list, short_text):
         entity_tags_dict = {}
         init_cand_ent_scores_dict = {n: [] for n in range(len(entity_substr_list))}
-        types_of_sport_ent, types_of_sport_tr = set(), set()
         already_found = set()
+        p641_ent, p641_tr = set(), set()
         for num_iter in range(5):
             for n, (entity_substr, entity_substr_split, entity_sent, tags_with_probas) in \
                     enumerate(zip(entity_substr_list, entity_substr_split_list, entity_sent_list,
@@ -463,7 +470,6 @@ class EntityLinker(Component, Serializable):
                         if not is_already_found:
                             tm_sqlite_st = time.time()
                             if tags_for_search:
-                                p641_ent, p641_tr = [], []
                                 cand_ent_scores = self.get_cand_ent(entity_substr, entity_substr_split,
                                     tags_for_search, entity_sent, sentences_list, p641_ent, p641_tr, short_text)
                             if cand_ent_scores:
@@ -473,9 +479,13 @@ class EntityLinker(Component, Serializable):
                                     cur_types = cur_types.split()
                                 if isinstance(cur_p641, str):
                                     cur_p641 = cur_p641.split()
-                                p641_ent, p641_tr = self.postprocess_types_for_entity_filter(entity_substr,
+                                new_p641_ent, new_p641_tr = self.postprocess_types_for_entity_filter(entity_substr,
                                     entity_sent, tags_for_search, cur_substr_score, cur_types, cur_p641)
-                            
+                                p641_ent = p641_ent.union(new_p641_ent)
+                                p641_tr = p641_tr.union(new_p641_tr)
+                                if cur_tag.lower() == "type_of_sport":
+                                    p641_tr = {(entity_sent, cur_ent)}
+
                             tm_sqlite_end = time.time()
                             if "PER" in tags_for_search:
                                 already_found.add(entity_substr)
@@ -485,11 +495,12 @@ class EntityLinker(Component, Serializable):
     
     def postprocess_entities(self, entity_substr_list, entity_substr_split_list, entity_offsets_list, substr_tags_list,
                                    entity_sent_list, entities_with_conn_scores_list, entities_types_dict,
-                                   sentences_list, sentences_offsets_list):
+                                   sentences_list, sentences_offsets_list, locations_dict):
         entity_types_sent_most_freq, entity_types_most_freq = self.most_freq_types(entity_substr_split_list,
                     substr_tags_list, entity_sent_list, entities_with_conn_scores_list, entities_types_dict)
         
         entity_ids_list, pages_list, ent_tags_list, conf_list, wiki_types_list = [], [], [], [], []
+        top_entities_with_scores_list = []
         for entity_substr, entity_substr_split, entity_offsets, tag, entity_sent, entities_with_conn_scores in \
                 zip(entity_substr_list, entity_substr_split_list, entity_offsets_list, substr_tags_list,
                     entity_sent_list, entities_with_conn_scores_list):
@@ -530,7 +541,7 @@ class EntityLinker(Component, Serializable):
                                                               conn_score_tag, float(substr_score), page, wiki_types, ent_tag])
             top_entities_with_scores = filtered_top_entities_with_scores
             
-            if len(entity_substr_split) >= 4 or tag in {"TYPE_OF_SPORT", "ORG"}:
+            if len(entity_substr_split) >= 4 or tag in {"TYPE_OF_SPORT", "ORG", "CITY", "RIVER", "COUNTY"}:
                 top_entities_with_scores = sorted(top_entities_with_scores, key=lambda x: (x[1], x[3], x[4], x[2]), reverse=True)
             else:
                 top_entities_with_scores = sorted(top_entities_with_scores, key=lambda x: (x[3], x[4], x[1], x[2]), reverse=True)
@@ -575,7 +586,45 @@ class EntityLinker(Component, Serializable):
                 if first_ent[1] <= second_ent[1] and second_ent[2] / max(first_ent[2], 1) > 2 \
                         and (second_ent[3] + second_ent[4]) / 2 > (first_ent[3] + first_ent[4]) / 2:
                     top_entities_with_scores = [second_ent, first_ent] + else_ent
+            top_entities_with_scores_list.append(top_entities_with_scores)
 
+        tags_in_text_cnts = {}
+        for top_entities_with_scores in top_entities_with_scores_list:
+            if top_entities_with_scores:
+                if top_entities_with_scores[0][-1].lower() in tags_in_text_cnts:
+                    tags_in_text_cnts[top_entities_with_scores[0][-1].lower()] += 1
+                else:
+                    tags_in_text_cnts[top_entities_with_scores[0][-1].lower()] = 1
+        main_location = ""
+        locations_in_text = {}
+        if tags_in_text_cnts.get("city", 0) + tags_in_text_cnts.get("county", 0) > 4:
+            for top_entities_with_scores in top_entities_with_scores_list:
+                if top_entities_with_scores and top_entities_with_scores[0]:
+                    entity_id = top_entities_with_scores[0][0]
+                    if locations_dict.get(entity_id, ""):
+                        locations = locations_dict[entity_id].split()
+                        for location in locations:
+                            if location in locations_in_text:
+                                locations_in_text[location] += 1
+                            else:
+                                locations_in_text[location] = 1
+            locations_in_text = list(locations_in_text.items())
+            locations_in_text = sorted(locations_in_text, key=lambda x: x[1], reverse=True)
+            if locations_in_text and locations_in_text[0][1] > 4:
+                main_location = locations_in_text[0][0]
+
+        if main_location:
+            for j in range(len(top_entities_with_scores_list)):
+                if top_entities_with_scores_list[j] and top_entities_with_scores_list[j][0] \
+                        and top_entities_with_scores_list[j][0][-1].lower() in {"city", "county"} \
+                        and locations_dict.get(top_entities_with_scores_list[j][0][0], "") \
+                        and locations_dict.get(top_entities_with_scores_list[j][0][0], "") != main_location:
+                    for elem in top_entities_with_scores_list[j]:
+                        if main_location in locations_dict.get(elem[0], "").split():
+                            top_entities_with_scores_list[j] = [elem]
+                            break
+        
+        for top_entities_with_scores in top_entities_with_scores_list:
             entity_ids = [elem[0] for elem in top_entities_with_scores]
             confs = [elem[1:6] for elem in top_entities_with_scores]
             final_confs = [elem[5] for elem in top_entities_with_scores]
@@ -586,6 +635,9 @@ class EntityLinker(Component, Serializable):
             low_conf = False
             if confs and confs[0][0] < 0.3 and confs[0][4] < 0.51 and not self.using_custom_db:
                 low_conf = True
+            if self.test_mode and confs and (confs[0][0] > 0.1 and ent_tags \
+                    and ent_tags[0] in {"sports_season", "national_sports_team", "sports_event"}):
+                low_conf = False
             if not low_conf:
                 entity_ids_list.append(copy.deepcopy(entity_ids[:self.num_entities_to_return]))
                 pages_list.append(copy.deepcopy(pages[:self.num_entities_to_return]))
@@ -820,6 +872,8 @@ class EntityLinker(Component, Serializable):
         if tags_for_search and tags_for_search[0] not in {"LITERARY_WORK", "SONG", "WORK_OF_ART", "FILM"} \
                 and entity_substr.startswith("the "):
             entity_substr = entity_substr[4:]
+        if tags_for_search and tags_for_search[0] == "TYPE_OF_SPORT":
+            cur_p641 = []
         
         tm_st = time.time()
         if self.db_format == "sqlite":
@@ -966,7 +1020,7 @@ class EntityLinker(Component, Serializable):
             if self.tags_filename and not self.using_custom_db:
                 for tag in tags:
                     query_str, make_query_flag = self.make_query_str(entity_substr, None, rels_dict)
-                    log.info(f"query_str {query_str} entity_substr {entity_substr}")
+                    log.info(f"query_str {query_str} entity_substr {entity_substr} tag {tag}")
                     if tag.lower() != "black" and tag.lower() in self.cursors and make_query_flag:
                         res = self.cursors[tag.lower()].execute(inv_index_query, (query_str,))
                         entities_and_ids = res.fetchall()
