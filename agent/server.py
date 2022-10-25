@@ -14,7 +14,6 @@ from agent.server_utils.constants import (
     WIKIPEDIA_FILE_URI_PREFIX,
 )
 from agent.server_utils import preprocessing
-from agent.stats_collector.route_patch import StatsCollectorRoute
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.DEBUG
@@ -24,6 +23,7 @@ logger = logging.getLogger(__name__)
 
 server_settings = ServerSettings()
 if server_settings.collect_stats:
+    from agent.stats_collector.route_patch import StatsCollectorRoute
     route_class = StatsCollectorRoute
 else:
     route_class = APIRoute
