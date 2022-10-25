@@ -648,6 +648,9 @@ and a regular user (`MONGODB_USERNAME` and `MONGODB_PASSWORD`).
 
 The latter will be used to connect the statistics collector to the database.
 
+Other configuration options are extensively described in [bitnami/mongodb docs](https://hub.docker.com/r/bitnami/mongodb).
+
+
 ### Create or edit a `.env` file in the root directory
 ```dotenv
 AGENT_URL=http://agent:9999/
