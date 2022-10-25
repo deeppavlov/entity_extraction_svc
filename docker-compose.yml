@@ -27,23 +27,24 @@ services:
         NER_CONFIG: entity_detection_en.json
         EL_CONFIG: entity_linking_en_full.json
         PORT: 9103
-        SRC_DIR: annotators/entity_extraction/
+        SRC_DIR: annotators/entity_extraction_base/
         INCLUDE_MISC: 1
+        TEST_MODE: 1
       context: ./
-      dockerfile: annotators/entity_extraction/Dockerfile
+      dockerfile: annotators/entity_extraction_base/Dockerfile
     ports:
       - 9103:9103
     volumes:
-      - ./annotators/entity_extraction:/src
+      - ./annotators/entity_extraction_base:/src
       - ~/.deeppavlov:/root/.deeppavlov
     environment:
       - CUDA_VISIBLE_DEVICES=''
     deploy:
       resources:
         limits:
-          memory: 2G
+          memory: 6G
         reservations:
-          memory: 2G
+          memory: 6G
 
   wiki-parser:
     env_file: [.env]
