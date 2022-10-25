@@ -19,12 +19,21 @@ class StatsDatabase:
         )
         self.db = self.client[database]
 
-    async def save_request(self, session_id: UUID, body: dict):
+    async def save_request(self, session_id: UUID, endpoint: str, body: dict):
         await self.db.requests.insert_one(
-            {"_id": session_id, "timestamp": datetime.utcnow(), "body": body}
+            {
+                "_id": session_id,
+                "timestamp": datetime.utcnow(),
+                "endpoint": endpoint,
+                "body": body,
+            }
         )
 
     async def save_response(self, session_id: UUID, body: dict):
         await self.db.responses.insert_one(
-            {"_id": session_id, "timestamp": datetime.utcnow(), "body": body}
+            {
+                "_id": session_id,
+                "timestamp": datetime.utcnow(),
+                "body": body,
+            }
         )

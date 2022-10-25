@@ -1,12 +1,7 @@
 from pydantic import BaseSettings
 
 
-class ServerSettings(BaseSettings):
-    agent_url: str
-    entity_extraction_url: str
-    entity_detection_url: str
-    entity_linking_url: str
-    wiki_parser_url: str
+class StatsCollectorSettings(BaseSettings):
     stats_db_host: str
     stats_db_port: int
     stats_db_name: str

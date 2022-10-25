@@ -1,23 +1,20 @@
-import json
 import logging
 from datetime import datetime
-from uuid import uuid4
-from typing import List, Union, Optional, Literal, Callable
+from typing import List, Union, Optional, Literal
 
 import requests
-from fastapi import FastAPI, HTTPException, UploadFile, APIRouter, Request, Response
+from fastapi import FastAPI, HTTPException, UploadFile, APIRouter
 from fastapi.routing import APIRoute
 from pydantic import BaseModel
 from starlette.middleware.cors import CORSMiddleware
 
-from agent.config import ServerSettings
-from agent.constants import (
+from agent.server_utils.config import ServerSettings
+from agent.server_utils.constants import (
     WIKIPEDIA_PAGE_URI_PREFIX,
     WIKIPEDIA_FILE_URI_PREFIX,
 )
-from agent import preprocessing
-from agent.stats_db import StatsDatabase
-
+from agent.server_utils import preprocessing
+from agent.stats_collector.route_patch import StatsCollectorRoute
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.DEBUG
@@ -25,24 +22,15 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-class LoggedStatisticsRoute(APIRoute):
-    def get_route_handler(self) -> Callable:
-        original_route_handler = super().get_route_handler()
-
-        async def custom_route_handler(request: Request) -> Response:
-            # start_time = time.time()
-            session_id = uuid4()
-            await stats_db.save_request(session_id, await request.json())
-            response = await original_route_handler(request)
-            await stats_db.save_response(session_id, json.loads(response.body))
-            # process_time = time.time() - start_time
-            return response
-
-        return custom_route_handler
+server_settings = ServerSettings()
+if server_settings.collect_stats:
+    route_class = APIRoute
+else:
+    route_class = StatsCollectorRoute
 
 
 app = FastAPI()
-api_router = APIRouter(route_class=LoggedStatisticsRoute)
+api_router = APIRouter(route_class=route_class)
 
 
 app.add_middleware(
@@ -231,7 +219,7 @@ def preprocess_text(text: str):
     return text
 
 
-def preprocess_html(html: Union[bytes, str], engine: str, **engine_kwargs):
+def preprocess_html(html: Union[bytes, str], engine: Literal["bs4", "trafilatura"], **engine_kwargs):
     if engine == "bs4":
         text = preprocessing.parse_html_bs4(html, **engine_kwargs)
     elif engine == "trafilatura":
@@ -244,7 +232,7 @@ def preprocess_html(html: Union[bytes, str], engine: str, **engine_kwargs):
     return text
 
 
-def preprocess_url(url: str, html_engine: str, **html_engine_kwargs):
+def preprocess_url(url: str, html_engine: Literal["bs4", "trafilatura"], **html_engine_kwargs):
     raw_html = requests.get(url).content
     text = preprocess_html(raw_html, html_engine, **html_engine_kwargs)
 
@@ -339,40 +327,34 @@ def unpack_entity_extraction_service_response(
     )
 
 
-server_settings = ServerSettings()
-stats_db = StatsDatabase(
-    server_settings.stats_db_username,
-    server_settings.stats_db_password,
-    server_settings.stats_db_host,
-    server_settings.stats_db_port,
-    server_settings.stats_db_name,
-    auth_database=server_settings.stats_db_auth_database,
-)
-
-
 @api_router.post("/")
 async def extract(payload: EntityExtractionAgentRequest):
     text = ""
     n_main_args = sum(int(bool(pl_value)) for pl_value in [payload.text, payload.html, payload.url])
 
-    if n_main_args > 1:
-        raise HTTPException(
-            status_code=400, detail="Provide only text, html or url"
-        )
-    elif not (payload.text or payload.html or payload.url):
-        raise HTTPException(status_code=400, detail="Provide either text, html or url")
+    if n_main_args != 1:
+        raise HTTPException(status_code=400, detail="Provide only text, html or url")
     elif payload.text:
         text = preprocess_text(payload.text)
     elif payload.html:
-        text = preprocess_html(payload.html, payload.parser_engine, **payload.parser_kwargs)
+        try:
+            text = preprocess_html(payload.html, payload.parser_engine, **payload.parser_kwargs)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
     elif payload.url:
-        text = preprocess_url(payload.url, payload.parser_engine, **payload.parser_kwargs)
+        try:
+            text = preprocess_url(payload.url, payload.parser_engine, **payload.parser_kwargs)
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=str(e))
 
     request_data = EntityExtractionServiceRequest(texts=[text]).dict()
-    response = requests.post(server_settings.entity_extraction_url, json=request_data)
-    entities = response.json()
 
-    logger.debug(entities)
+    try:
+        response = requests.post(server_settings.entity_extraction_url, json=request_data)
+        entities = response.json()
+        logger.debug(entities)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Oh no, Entity Extraction server is down! {e}")
 
     entities = EntityExtractionServiceResponse(**entities)
     entities = unpack_entity_extraction_service_response(
@@ -394,9 +376,15 @@ async def parse_html(payload: HtmlParserAgentRequest):
     if payload.html and payload.url:
         raise HTTPException(status_code=400, detail="Provide only html or url")
     elif payload.html:
-        text = preprocess_html(payload.html, payload.parser_engine, **payload.parser_kwargs)
+        try:
+            text = preprocess_html(payload.html, payload.parser_engine, **payload.parser_kwargs)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
     elif payload.url:
-        text = preprocess_url(payload.url, payload.parser_engine, **payload.parser_kwargs)
+        try:
+            text = preprocess_url(payload.url, payload.parser_engine, **payload.parser_kwargs)
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=str(e))
 
     return text
 
