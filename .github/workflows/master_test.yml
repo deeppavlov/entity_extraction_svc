@@ -31,9 +31,9 @@ jobs:
             --verbose \
             --connect-timeout 10 \
             --max-time 10 \
-            --retry 10 \
+            --retry 20 \
             --retry-delay 10 \
-            --retry-max-time 120 \
+            --retry-max-time 400 \
             --retry-connrefused \
             --request POST \
             --url http://localhost:9999/ \
