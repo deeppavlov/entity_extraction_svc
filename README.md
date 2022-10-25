@@ -643,7 +643,7 @@ MONGODB_DATABASE=statistics
 
 Here, `MONGODB_PORT_NUMBER` defines the port exposed by mongodb container.
 
-The mongodb instance will be created with an admin user (`MONGODB_ROOT_USER` and `MONGODB_ROOT_USER`)
+The mongodb instance will be created with an admin user (`MONGODB_ROOT_USER` and `MONGODB_ROOT_PASSWORD`)
 and a regular user (`MONGODB_USERNAME` and `MONGODB_PASSWORD`).
 
 The latter will be used to connect the statistics collector to the database.
