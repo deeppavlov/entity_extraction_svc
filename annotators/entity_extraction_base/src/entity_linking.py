@@ -803,6 +803,9 @@ class EntityLinker(Component, Serializable):
             tags_for_search.append("PER")
         if len(tags_with_probas) > 1 and tags_with_probas[1][1] == "PER" and tags_with_probas[0][0] < 0.55:
             tags_for_search.append("PER")
+        if len(tags_with_probas) > 1 and tags_with_probas[0][1] == "SCIENCE_AND_TECHNOLOGY" \
+                and tags_with_probas[1][1]  == "PER" and "PER" not in tags_for_search:
+            tags_for_search.append("PER")
 
         if len(entity_substr_list) == 1 and not tags_for_search:
             for tag_proba, tag in tags_with_probas[:2]:
