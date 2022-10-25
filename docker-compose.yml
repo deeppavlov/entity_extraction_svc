@@ -37,6 +37,7 @@ services:
         SRC_DIR: annotators/entity_extraction_base/
         INCLUDE_MISC: 1
         MISC_THRES: 0.88
+        TEST_MODE: 1
       context: ./
       dockerfile: annotators/entity_extraction_base/Dockerfile
     ports:
@@ -49,9 +50,9 @@ services:
     deploy:
       resources:
         limits:
-          memory: 2G
+          memory: 6G
         reservations:
-          memory: 2G
+          memory: 6G
 
   wiki-parser:
     env_file: [.env]

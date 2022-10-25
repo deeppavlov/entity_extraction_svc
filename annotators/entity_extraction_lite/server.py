@@ -37,6 +37,13 @@ include_misc = bool(int(os.getenv("INCLUDE_MISC", "0")))
 misc_thres = float(os.getenv("MISC_THRES", "0.88"))
 
 ner_config = parse_config(ner_config_name)
+entity_detection_config_name = ner_config['chainer']['pipe'][1]['ner']['config_path']
+entity_detection = json.load(open(entity_detection_config_name, 'r'))
+entity_detection["chainer"]["pipe"][6]["include_misc"] = include_misc
+entity_detection["chainer"]["pipe"][6]["misc_thres"] = misc_thres
+json.dump(entity_detection, open(entity_detection_config_name, 'w'), indent=2)
+
+logger.info(f"ner_config {ner_config['chainer']['pipe'][1]['ner']}")
 
 try:
     ner = build_model(ner_config, download=True)
@@ -45,6 +52,15 @@ try:
 except Exception as e:
     logger.exception(e)
     raise e
+
+
+def add_stop_signs(texts):
+    new_texts = []
+    for text in texts:
+        if text and isinstance(text, str) and text[-1] not in {".", ",", "?", "!"}:
+            text = f"{text}."
+        new_texts.append(text)
+    return new_texts
 
 
 class Payload(BaseModel):
@@ -63,16 +79,17 @@ class TripletsList(BaseModel):
 async def entity_extraction(payload: Payload):
     st_time = time.time()
     texts = payload.texts
+    texts = add_stop_signs(texts)
     entity_info = {}
-    entity_substr, init_entity_offsets, entity_offsets, entity_tags_with_probas, entity_positions, \
-        sentences_offsets, sentences = [[[] for _ in texts] for _ in range(7)]
+    entity_substr, init_entity_offsets, entity_offsets, entity_positions, tags, sentences_offsets, sentences, \
+            probas = [[[] for _ in texts] for _ in range(8)]
     try:
         raw_entity_substr, raw_init_entity_offsets, raw_entity_offsets, raw_entity_positions, raw_tags, \
-            raw_tags_with_probas, sentences_offsets, sentences, raw_probas = ner(texts)
+            sentences_offsets, sentences, raw_probas = ner(texts)
     except Exception as e:
         logger.info(f"{type(e)} error in entity detection: {e}")
         raw_entity_substr, raw_init_entity_offsets, raw_entity_offsets, raw_entity_positions, raw_tags, \
-            raw_tags_with_probas, sentences_offsets, sentences, raw_probas = [[[] for _ in texts] for _ in range(9)]
+            sentences_offsets, sentences, raw_probas = [[[] for _ in texts] for _ in range(8)]
 
     logger.debug(f"NER raw_entity_substr {raw_entity_substr}")
     logger.debug(f"NER raw_init_entity_offsets {raw_init_entity_offsets}")
@@ -91,21 +108,22 @@ async def entity_extraction(payload: Payload):
                 entity_substr[batch_idx].append(raw_entity_substr[batch_idx][entity_idx])
                 init_entity_offsets[batch_idx].append(raw_init_entity_offsets[batch_idx][entity_idx])
                 entity_offsets[batch_idx].append(raw_entity_offsets[batch_idx][entity_idx])
-                entity_tags_with_probas[batch_idx].append(raw_tags_with_probas[batch_idx][entity_idx])
                 entity_positions[batch_idx].append(raw_entity_positions[batch_idx][entity_idx])
+                tags[batch_idx].append(raw_tags[batch_idx][entity_idx])
+                probas[batch_idx].append(raw_probas[batch_idx][entity_idx])
 
     entity_ids, entity_tags, entity_conf, entity_pages, image_links, categories, first_pars, dbpedia_types = \
         [[[] for _ in texts] for _ in range(8)]
 
     if el_config_name == "entity_linking_en.json":
         entity_ids, entity_tags, entity_conf, entity_pages = \
-            el(entity_substr, sentences, entity_offsets, sentences_offsets)
+            el(entity_substr, tags, sentences, entity_offsets, sentences_offsets, probas)
         entity_info = {"entity_substr": entity_substr, "entity_offsets": entity_offsets, "entity_ids": entity_ids,
                        "entity_tags": entity_tags, "entity_conf": entity_conf, "entity_pages": entity_pages}
     elif el_config_name == "entity_linking_en_full.json":
         try:
             entity_ids, entity_tags, entity_conf, entity_pages, image_links, categories, first_pars, dbpedia_types = \
-                el(entity_substr, sentences, entity_offsets, entity_tags_with_probas, sentences_offsets)
+                el(entity_substr, tags, sentences, entity_offsets, sentences_offsets, probas)
             for i in range(len(entity_substr)):
                 for j in range(len(entity_substr[i])):
                     if entity_tags[i][j] == []:

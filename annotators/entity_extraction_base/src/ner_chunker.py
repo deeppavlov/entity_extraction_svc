@@ -70,7 +70,24 @@ class NerChunker(Component):
         for n, doc in enumerate(docs_batch):
             if self.lowercase:
                 doc = doc.lower()
-
+            for old_symb, new_symb in [("’", "'"), ("”", '"'), ("â€™", "'"), ("â€œ", '"'), ("â€\x9d", '"')]:
+                doc = doc.replace(old_symb, new_symb)
+            if "<!DOCTYPE html>" in doc:
+                try:
+                    soup = BeautifulSoup(doc, "html.parser")
+                    doc = soup.get_text()
+                    doc = re.sub(r'\s+', ' ', doc)
+                except:
+                    pass
+            elif "?xml version" in doc:
+                try:
+                    soup = BeautifulSoup(doc, "lxml")
+                    doc = soup.get_text()
+                    doc = re.sub(r'\s+', ' ', doc)
+                except:
+                    pass
+            elif "<" in doc:
+                doc = re.sub('<[^<]+>', "", doc).strip()
             start = 0
             text = ""
             sentences_list = []

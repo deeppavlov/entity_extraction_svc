@@ -197,9 +197,6 @@ class TorchTransformersNerPreprocessor(Component):
             new_offsets.append(offset)
             if num_subw >= 500:
                 break
-        out = open("texts.txt", 'a')
-        out.write(f"num_subw {num_subw} --- {len(tokens_subword)}"+'\n')
-        out.close()
         tokens_subword.append('[SEP]')
         startofword_markers.append(0)
         tags_subword.append('X')
@@ -526,7 +523,7 @@ class TorchTransformersElTagPostprocessor(Component):
             for line in lines:
                 self.tags_list.append(line.strip().split()[0])
     
-    def __call__(self, probas_batch):
+    def __call__(self, probas_batch, entity_substr_batch):
         ent_tag_proba_batch = []
         for probas_list in probas_batch:
             ent_tag_proba_list = []
