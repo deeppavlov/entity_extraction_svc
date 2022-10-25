@@ -2,7 +2,7 @@ import json
 from uuid import uuid4
 from typing import Callable
 
-from fastapi import Request, Response
+from fastapi import Request, Response, HTTPException
 from fastapi.routing import APIRoute
 
 from agent.stats_collector.config import StatsCollectorSettings
@@ -26,10 +26,21 @@ class StatsCollectorRoute(APIRoute):
 
         async def custom_route_handler(request: Request) -> Response:
             session_id = uuid4()
-            await stats_db.save_request(session_id, request.scope["path"], await request.json())
+            await stats_db.save_request(
+                session_id, request.scope["path"], await request.json()
+            )
 
-            response = await original_route_handler(request)
-            await stats_db.save_response(session_id, json.loads(response.body))
+            try:
+                response = await original_route_handler(request)
+                await stats_db.save_response(session_id, json.loads(response.body))
+            except HTTPException as e:
+                e_data = {
+                    "status_code": e.status_code,
+                    "detail": e.detail,
+                    "headers": e.headers,
+                }
+                await stats_db.save_exception(session_id, e_data)
+                raise e
 
             return response
 

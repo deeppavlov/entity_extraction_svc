@@ -24,9 +24,9 @@ logger = logging.getLogger(__name__)
 
 server_settings = ServerSettings()
 if server_settings.collect_stats:
-    route_class = APIRoute
-else:
     route_class = StatsCollectorRoute
+else:
+    route_class = APIRoute
 
 
 app = FastAPI()
@@ -219,7 +219,9 @@ def preprocess_text(text: str):
     return text
 
 
-def preprocess_html(html: Union[bytes, str], engine: Literal["bs4", "trafilatura"], **engine_kwargs):
+def preprocess_html(
+    html: Union[bytes, str], engine: Literal["bs4", "trafilatura"], **engine_kwargs
+):
     if engine == "bs4":
         text = preprocessing.parse_html_bs4(html, **engine_kwargs)
     elif engine == "trafilatura":
@@ -232,7 +234,9 @@ def preprocess_html(html: Union[bytes, str], engine: Literal["bs4", "trafilatura
     return text
 
 
-def preprocess_url(url: str, html_engine: Literal["bs4", "trafilatura"], **html_engine_kwargs):
+def preprocess_url(
+    url: str, html_engine: Literal["bs4", "trafilatura"], **html_engine_kwargs
+):
     raw_html = requests.get(url).content
     text = preprocess_html(raw_html, html_engine, **html_engine_kwargs)
 
@@ -330,7 +334,9 @@ def unpack_entity_extraction_service_response(
 @api_router.post("/")
 async def extract(payload: EntityExtractionAgentRequest):
     text = ""
-    n_main_args = sum(int(bool(pl_value)) for pl_value in [payload.text, payload.html, payload.url])
+    n_main_args = sum(
+        int(bool(pl_value)) for pl_value in [payload.text, payload.html, payload.url]
+    )
 
     if n_main_args != 1:
         raise HTTPException(status_code=400, detail="Provide only text, html or url")
@@ -338,23 +344,31 @@ async def extract(payload: EntityExtractionAgentRequest):
         text = preprocess_text(payload.text)
     elif payload.html:
         try:
-            text = preprocess_html(payload.html, payload.parser_engine, **payload.parser_kwargs)
+            text = preprocess_html(
+                payload.html, payload.parser_engine, **payload.parser_kwargs
+            )
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e))
     elif payload.url:
         try:
-            text = preprocess_url(payload.url, payload.parser_engine, **payload.parser_kwargs)
+            text = preprocess_url(
+                payload.url, payload.parser_engine, **payload.parser_kwargs
+            )
         except Exception as e:
             raise HTTPException(status_code=400, detail=str(e))
 
     request_data = EntityExtractionServiceRequest(texts=[text]).dict()
 
     try:
-        response = requests.post(server_settings.entity_extraction_url, json=request_data)
+        response = requests.post(
+            server_settings.entity_extraction_url, json=request_data
+        )
         entities = response.json()
         logger.debug(entities)
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Oh no, Entity Extraction server is down! {e}")
+        raise HTTPException(
+            status_code=400, detail=f"Oh no, Entity Extraction server is down! {e}"
+        )
 
     entities = EntityExtractionServiceResponse(**entities)
     entities = unpack_entity_extraction_service_response(
@@ -377,12 +391,16 @@ async def parse_html(payload: HtmlParserAgentRequest):
         raise HTTPException(status_code=400, detail="Provide only html or url")
     elif payload.html:
         try:
-            text = preprocess_html(payload.html, payload.parser_engine, **payload.parser_kwargs)
+            text = preprocess_html(
+                payload.html, payload.parser_engine, **payload.parser_kwargs
+            )
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e))
     elif payload.url:
         try:
-            text = preprocess_url(payload.url, payload.parser_engine, **payload.parser_kwargs)
+            text = preprocess_url(
+                payload.url, payload.parser_engine, **payload.parser_kwargs
+            )
         except Exception as e:
             raise HTTPException(status_code=400, detail=str(e))
 

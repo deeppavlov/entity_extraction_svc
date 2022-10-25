@@ -37,3 +37,12 @@ class StatsDatabase:
                 "body": body,
             }
         )
+
+    async def save_exception(self, session_id: UUID, exception: dict):
+        await self.db.exceptions.insert_one(
+            {
+                "_id": session_id,
+                "timestamp": datetime.utcnow(),
+                "exception": exception,
+            }
+        )

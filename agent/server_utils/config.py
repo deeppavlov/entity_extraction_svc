@@ -6,8 +6,6 @@ from pydantic import BaseSettings
 class ServerSettings(BaseSettings):
     agent_url: str
     entity_extraction_url: str
-    entity_detection_url: str
-    entity_linking_url: str
     wiki_parser_url: str
     collect_stats: Optional[bool] = False
 

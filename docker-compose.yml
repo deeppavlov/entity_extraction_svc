@@ -2,7 +2,7 @@ services:
   agent:
     env_file: [.env]
     environment:
-      WAIT_HOSTS: "stats-db:27017, entity-extraction:9103, wiki-parser:9077"
+      WAIT_HOSTS: "entity-extraction:9103, wiki-parser:9077"
       WAIT_HOSTS_TIMEOUT: ${WAIT_TIMEOUT:-480}
     build:
       args:
@@ -20,13 +20,6 @@ services:
           memory: 64M
         reservations:
           memory: 64M
-
-  stats-db:
-    image: bitnami/mongodb:latest
-    env_file:
-      - mongo.env
-    ports:
-      - 27017:27017
 
   entity-extraction:
     build:

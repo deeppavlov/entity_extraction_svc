@@ -1,0 +1,13 @@
+services:
+  agent:
+    environment:
+      WAIT_HOSTS: "stats-db:23456, entity-extraction:9103, wiki-parser:9077"
+
+  stats-db:
+    image: bitnami/mongodb:latest
+    env_file:
+      - mongo.env
+    ports:
+      - 23456:23456
+
+version: '3.7'
