@@ -31,9 +31,9 @@ jobs:
             --verbose \
             --connect-timeout 10 \
             --max-time 10 \
-            --retry 10 \
+            --retry 20 \
             --retry-delay 10 \
-            --retry-max-time 120 \
+            --retry-max-time 400 \
             --retry-connrefused \
             --request POST \
             --url http://localhost:9999/ \
@@ -41,3 +41,8 @@ jobs:
             --data '{
               "text": "The Mona Lisa is a sixteenth century oil painting created by Leonardo. It'\''s held at the Louvre in Paris."
             }'
+      - name: Docker logs dump on failure
+        if: failure()
+        uses: jwalton/gh-docker-logs@v2.2.0
+      - name: Final docker logs dump
+        uses: jwalton/gh-docker-logs@v2.2.0

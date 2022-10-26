@@ -444,6 +444,7 @@ class EntityLinker(Component, Serializable):
                     enumerate(zip(entity_substr_list, entity_substr_split_list, entity_sent_list,
                                   tags_with_probas_list)):
                 tags_for_search = self.process_tags_for_search(entity_substr_list, tags_with_probas)
+                log.info(f"{entity_substr} --- tags: {tags_for_search}")
                 if tags_for_search:
                     tags_for_search = self.correct_tags(entity_substr, tags_for_search, tags_with_probas)
                     tags_by_iter = {0: {"POLITICIAN", "ACTOR", "WRITER", "MUSICIAN", "ATHLETE", "PAINTER", "ENTREPRENEUR", "PER"},
@@ -797,15 +798,20 @@ class EntityLinker(Component, Serializable):
             if tag in self.related_tags:
                 add_tags += self.related_tags[tag]
         tags_for_search += add_tags
-        
+
         if tags_with_probas and tags_with_probas[0][1] == "PER" and tags_with_probas[0][0] > 0.33:
             tags_for_search.append("PER")
-        
+        if len(tags_with_probas) > 1 and tags_with_probas[1][1] == "PER" and tags_with_probas[0][0] < 0.55:
+            tags_for_search.append("PER")
+        if len(tags_with_probas) > 1 and tags_with_probas[0][1] == "SCIENCE_AND_TECHNOLOGY" \
+                and tags_with_probas[1][1]  == "PER" and "PER" not in tags_for_search:
+            tags_for_search.append("PER")
+
         if len(entity_substr_list) == 1 and not tags_for_search:
             for tag_proba, tag in tags_with_probas[:2]:
                 tags_for_search.append(tag)
             tags_for_search.append("MISC")
-        
+
         if tags_with_probas and tags_with_probas[0][0] < 0.9 \
                 and tags_with_probas[0][1] in {"OCCUPATION", "CHEMICAL_ELEMENT"}:
             tags_for_search.append("MISC")

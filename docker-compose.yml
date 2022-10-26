@@ -29,7 +29,8 @@ services:
         PORT: 9103
         SRC_DIR: annotators/entity_extraction_base/
         INCLUDE_MISC: 1
-        TEST_MODE: 1
+        MISC_THRES: 0.88
+        TEST_MODE: 0
       context: ./
       dockerfile: annotators/entity_extraction_base/Dockerfile
     ports:

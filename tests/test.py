@@ -5,7 +5,7 @@ import pytest
 import requests
 from dotenv import load_dotenv
 
-from agent.config import ServerSettings
+from agent.server_utils.config import ServerSettings
 
 
 DATASETS_DIR = Path(__file__).parent / "data"

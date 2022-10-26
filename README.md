@@ -1,11 +1,24 @@
 ## Entity Extraction Service
 Entity extraction API powered by DeepPavlov configs.
 
-![](docs/logo.png)
-
 
 ## Run with docker-compose
-`docker-compose up --build`
+
+### Create a `.env` file in the root directory
+```dotenv
+AGENT_URL=http://agent:9999/
+ENTITY_EXTRACTION_URL=http://entity-extraction:9103/entity_extraction
+WIKI_PARSER_URL=http://wiki-parser:9077/model
+```
+
+The URLs provided here work for docker-compose configurations, 
+since it resolves `container-names` into actual network addresses.
+If you deploy containers somewhere else, make sure to provide correct addresses. 
+
+### Build and run
+```
+docker-compose up --build
+```
 
 
 ## How to
@@ -22,7 +35,7 @@ Main gateway (with Swagger UI) is available at http://localhost:9999/
 #### RESPONSE
 <details>
 
-<summary>Show full response</summary>
+<summary>Show full response (around 600 lines)</summary>
 
 ```json
 {
@@ -612,6 +625,73 @@ Main gateway (with Swagger UI) is available at http://localhost:9999/
 ```
 
 </details>
+
+
+## Configuring statistics collector
+
+You can save requests, responses, and exceptions for debugging purposes.
+
+### Create a `mongo.env` file in the root directory
+```dotenv
+MONGODB_PORT_NUMBER=23456
+MONGODB_ROOT_USER=rootuser
+MONGODB_ROOT_PASSWORD=rootpassword
+MONGODB_USERNAME=statsuser
+MONGODB_PASSWORD=statspassword
+MONGODB_DATABASE=statistics
+```
+
+Here, `MONGODB_PORT_NUMBER` defines the port exposed by mongodb container.
+
+The mongodb instance will be created with an admin user (`MONGODB_ROOT_USER` and `MONGODB_ROOT_PASSWORD`)
+and a regular user (`MONGODB_USERNAME` and `MONGODB_PASSWORD`).
+
+The latter will be used to connect the statistics collector to the database.
+
+Other configuration options are extensively described in [bitnami/mongodb docs](https://hub.docker.com/r/bitnami/mongodb).
+
+
+### Create or edit a `.env` file in the root directory
+```dotenv
+AGENT_URL=http://agent:9999/
+ENTITY_EXTRACTION_URL=http://entity-extraction:9103/entity_extraction
+WIKI_PARSER_URL=http://wiki-parser:9077/model
+
+COLLECT_STATS=True
+STATS_DB_HOST=stats-db
+STATS_DB_PORT=23456
+STATS_DB_NAME=statistics
+STATS_DB_USERNAME=statsuser
+STATS_DB_PASSWORD=statspassword
+STATS_DB_AUTH_DATABASE=statistics
+```
+
+In order to enable statistics collection, the `COLLECT_STATS` flag should be set to True.
+
+`STATS_DB_HOST` and `STATS_DB_PORT` work just like `*_URL` variables:
+provide the name of your mongodb container or a real url.
+
+`STATS_DB_USERNAME` and `STATS_DB_PASSWORD` must be the same as `MONGODB_USERNAME` and `MONGODB_PASSWORD`
+from the `mongo.env` config.
+
+`STATS_DB_AUTH_DATABASE` is where we created the regular user
+and should be the same as `MONGODB_DATABASE` in `mongo.env`.
+
+Note: if you really need to use a privileged admin user to push statistics to the database,
+make sure to authenticate against an `admin` database:
+```dotenv
+STATS_DB_USERNAME=rootuser
+STATS_DB_PASSWORD=rootpassword
+STATS_DB_AUTH_DATABASE=admin
+```
+
+### Build and run with additional config
+The `docker-compose-stats-collector.yml` config file includes instructions to deploy the database.
+Make sure your `stats-db` `ports` are the same as the ports provided in `.env` and `mongo.env` files.
+```
+docker-compose -f docker-compose.yml -f docker-compose-stats-collector.yml up --build
+```
+
 
 ## Run tests
 ```
