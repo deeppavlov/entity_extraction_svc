@@ -22,8 +22,6 @@ jobs:
           cat .env
       - name: Build the stack
         run: docker-compose up -d
-      - name: Collect Docker Logs
-        uses: jwalton/gh-docker-logs@v2.2.0
       - name: Test
         run: |
           docker run --network container:entity_extraction_svc_agent_1 appropriate/curl \
@@ -32,8 +30,8 @@ jobs:
             --connect-timeout 10 \
             --max-time 10 \
             --retry 20 \
-            --retry-delay 10 \
-            --retry-max-time 400 \
+            --retry-delay 30 \
+            --retry-max-time 800 \
             --retry-connrefused \
             --request POST \
             --url http://localhost:9999/ \
