@@ -353,6 +353,7 @@ class NerChunkModel(Component):
                     doc_tags_with_probas = tags_with_probas_list
                     doc_probas = probas_list
                     doc_entity_offsets = entity_offsets_list
+                    doc_entity_positions = entity_positions_list
                     doc_sentences_offsets = sentences_offsets_list
                     doc_sentences = sentences_list
                     cur_doc_num = doc_num
