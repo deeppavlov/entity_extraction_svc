@@ -692,6 +692,10 @@ Make sure your `stats-db` `ports` are the same as the ports provided in `.env` a
 docker-compose -f docker-compose.yml -f docker-compose-stats-collector.yml up --build
 ```
 
+### Running statistics database separately
+```
+docker-compose -f docker-compose.yml -f docker-compose-stats-collector.yml up stats-db
+```
 
 ## Run tests
 ```

@@ -7,6 +7,8 @@ services:
     image: bitnami/mongodb:latest
     env_file:
       - mongo.env
+    volumes:
+      - ./data_db:/data/db
     ports:
       - 23456:23456
 
