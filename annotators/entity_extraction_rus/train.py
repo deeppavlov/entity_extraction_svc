@@ -61,7 +61,7 @@ def train(data_path: str = ''):
             "data_path": data_path
         }
     init_path = next(
-        i for i in config['metadata']['download'] if 'entity_detection_tinyroberta_42_sep.tar.gz' in i['url']
+        i for i in config['metadata']['download'] if 'entity_detection_rus.tar.gz' in i['url']
     )['subdir']
     model_path = config["metadata"]["variables"]["MODEL_PATH"]
     new_model_path = Path(f'{model_path}_new')

@@ -38,7 +38,7 @@
     "download": [
       {
         "url": "http://files.deeppavlov.ai/deeppavlov_data/entity_linking/el_rus_kg_files.tar.gz",
-        "subdir": "{DOWNLOADS_PATH}/entity_linking_rus/el_rus_kg_files/el_rus_kg_files.tar.gz"
+        "subdir": "{DOWNLOADS_PATH}/entity_linking_rus/el_rus_kg_files/el_rus_kg_files"
       }
     ]
   }
