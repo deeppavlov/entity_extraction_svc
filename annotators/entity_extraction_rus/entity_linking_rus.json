@@ -37,7 +37,7 @@
     },
     "download": [
       {
-        "url": "http://files.deeppavlov.ai/deeppavlov_data/entity_linking/el_eng_kg_48types_files_new.tar.gz",
+        "url": "http://files.deeppavlov.ai/deeppavlov_data/entity_linking/el_rus_kg_files.tar.gz",
         "subdir": "{DOWNLOADS_PATH}/entity_linking_rus/el_rus_kg_files/el_rus_kg_files.tar.gz"
       }
     ]
