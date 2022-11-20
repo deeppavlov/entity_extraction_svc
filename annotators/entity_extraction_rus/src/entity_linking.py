@@ -74,7 +74,7 @@ class EntityLinker(Component, Serializable):
                  tags_filename: str = None,
                  add_info_filename: str = None,
                  num_entities_for_bert_ranking: int = 10,
-                 test_mode: bool = True,
+                 test_mode: bool = False,
                  **kwargs) -> None:
         """
 
