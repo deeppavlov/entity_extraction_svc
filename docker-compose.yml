@@ -47,6 +47,29 @@ services:
         reservations:
           memory: 6G
 
+  entity-extraction-rus:
+    build:
+      args:
+        NER_CONFIG: entity_detection_rus.json
+        EL_CONFIG: entity_linking_rus.json
+        PORT: 9107
+        SRC_DIR: annotators/entity_extraction_rus/
+      context: ./
+      dockerfile: annotators/entity_extraction_rus/Dockerfile
+    ports:
+      - 9107:9107
+    volumes:
+      - ./annotators/entity_extraction_rus:/src
+      - ~/.deeppavlov:/root/.deeppavlov
+    environment:
+      - CUDA_VISIBLE_DEVICES=''
+    deploy:
+      resources:
+        limits:
+          memory: 6G
+        reservations:
+          memory: 6G
+
   wiki-parser:
     env_file: [.env]
     build:
