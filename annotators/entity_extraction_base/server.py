@@ -183,7 +183,8 @@ async def entity_detection(payload: Payload):
     texts = add_stop_signs(texts)
     entity_info = {}
     try:
-        entity_substr, entity_offsets, entity_positions, tags, sentences_offsets, sentences, probas = ner(texts)
+        entity_substr, init_entity_offsets, entity_offsets, entity_positions, tags, \
+            tags_with_probas, sentences_offsets, sentences, probas = ner(texts)
         entity_info = {"entity_substr": entity_substr, "entity_offsets": entity_offsets,
                        "entity_tags": tags, "probas": probas}
     except Exception as e:
