@@ -5,7 +5,7 @@
       {
         "class_name": "src.entity_linking:EntityLinker",
         "in": ["entity_substr", "sentences", "entity_offsets", "entity_tags_with_probas", "sentences_offsets"],
-        "out": ["entity_ids", "entity_tags", "entity_conf", "entity_pages"],
+        "out": ["entity_ids", "entity_tags", "entity_conf", "entity_pages", "image_links", "categories", "first_pars", "dbpedia_types"],
         "load_path": "{DOWNLOADS_PATH}/entity_linking_rus/el_rus_kg_files",
         "tags_filename": "{MODELS_PATH}/el_tags_roberta_rus/tag.dict",
         "rank_in_runtime": true,
@@ -22,10 +22,10 @@
         "delete_hyphens": true,
         "log_to_file": true,
         "lang": "ru",
-        "return_additional_info": false
+        "return_additional_info": true
       }
     ],
-    "out": ["entity_ids", "entity_tags", "entity_conf", "entity_pages"]
+    "out": ["entity_ids", "entity_tags", "entity_conf", "entity_pages", "image_links", "categories", "first_pars", "dbpedia_types"]
   },
   "metadata": {
     "variables": {
@@ -38,7 +38,7 @@
     "download": [
       {
         "url": "http://files.deeppavlov.ai/deeppavlov_data/entity_linking/el_rus_kg_files.tar.gz",
-        "subdir": "{DOWNLOADS_PATH}/entity_linking_rus/el_rus_kg_files/el_rus_kg_files"
+        "subdir": "{DOWNLOADS_PATH}/entity_linking_rus/el_rus_kg_files/"
       }
     ]
   }

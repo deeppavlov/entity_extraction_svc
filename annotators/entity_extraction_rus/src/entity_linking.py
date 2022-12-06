@@ -322,8 +322,17 @@ class EntityLinker(Component, Serializable):
             entity_conf_batch.append(entity_conf_list)
             entity_pages_batch.append(entity_pages_list)
             wiki_types_batch.append(wiki_types_list)
+        
+        #images_link_batch, categories_batch, first_par_batch, dbpedia_types_batch = [], [], [], []
+        
+        images_link_batch, first_par_batch, categories_batch, dbpedia_types_batch = \
+            [[[['' for entity_id in entity_ids] for entity_ids in entity_ids_list] for entity_ids_list in entity_ids_batch] for _ in range(4)]
 
-        return entity_ids_batch, entity_tags_batch, entity_conf_batch, entity_pages_batch
+        if self.return_additional_info:
+            return entity_ids_batch, entity_tags_batch, entity_conf_batch, entity_pages_batch, images_link_batch, \
+                categories_batch, first_par_batch, dbpedia_types_batch
+        else:
+            return entity_ids_batch, entity_tags_batch, entity_conf_batch, entity_pages_batch
 
     def entity_offsets(self, entity_substr_list, sentences_list):
         text = " ".join(sentences_list).lower()
