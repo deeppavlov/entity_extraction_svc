@@ -1,0 +1,76 @@
+services:
+  agent:
+    env_file: [.env]
+    environment:
+      WAIT_HOSTS: "entity-extraction:9102, wiki-parser:9076"
+      WAIT_HOSTS_TIMEOUT: ${WAIT_TIMEOUT:-480}
+    build:
+      args:
+        PORT: 9998
+        SRC_DIR: agent/
+      context: ./
+      dockerfile: agent/Dockerfile
+    volumes:
+      - ./agent:/src/agent
+    ports:
+      - 9998:9998
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+        reservations:
+          memory: 64M
+
+  entity-extraction:
+    build:
+      args:
+        NER_CONFIG: entity_detection_rus.json
+        EL_CONFIG: entity_linking_rus.json
+        PORT: 9102
+        SRC_DIR: annotators/entity_extraction_rus/
+        INCLUDE_MISC: 1
+        MISC_THRES: 0.88
+        TEST_MODE: 0
+      context: ./
+      dockerfile: annotators/entity_extraction_rus/Dockerfile
+    ports:
+      - 9102:9102
+    volumes:
+      - ./annotators/entity_extraction_rus:/src
+      - ~/.deeppavlov:/root/.deeppavlov
+    environment:
+      - CUDA_VISIBLE_DEVICES=''
+    deploy:
+      resources:
+        limits:
+          memory: 6G
+        reservations:
+          memory: 6G
+
+  wiki-parser:
+    env_file: [.env]
+    build:
+      args:
+        WIKI_LITE_DB: http://files.deeppavlov.ai/kbqa/wikidata/wikidata_lite.hdt
+        WIKI_LITE_INDEX_DB: http://files.deeppavlov.ai/kbqa/wikidata/wikidata_lite.hdt.index.v1-1
+        WIKI_CACHE_DB: http://files.deeppavlov.ai/kbqa/wikidata/wikidata_cache.json
+        CONFIG: wiki_parser.json
+        PORT: 9076
+        SRC_DIR: annotators/wiki_parser
+        COMMIT: ff5b156d16a949c3ec99da7fb60ae907dec37a41
+      context: ./
+      dockerfile: annotators/wiki_parser/Dockerfile
+    command: flask run -h 0.0.0.0 -p 9076
+    ports:
+      - 9076:9076
+    environment:
+      - CUDA_VISIBLE_DEVICES=''
+      - FLASK_APP=server
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 256M
+
+version: '3.7'
