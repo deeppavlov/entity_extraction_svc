@@ -110,7 +110,11 @@ class EntityExtractionServiceResponse(BaseModel):
         return self.entity_tags[0][idx]
 
     def types(self, idx, variety_idx):
-        return self.dbpedia_types[0][idx][variety_idx]
+        try:
+            types_value = self.dbpedia_types[0][idx][variety_idx]
+        except IndexError:
+            types_value = []
+        return types_value
 
     def id(self, idx, variety_idx):
         return self.entity_ids[0][idx][variety_idx]
@@ -130,7 +134,11 @@ class EntityExtractionServiceResponse(BaseModel):
         return {"wikipedia": uri} if uri else {}
 
     def image(self, idx, variety_idx):
-        return self.image_links[0][idx][variety_idx]
+        try:
+            link_value = self.image_links[0][idx][variety_idx]
+        except IndexError:
+            link_value = ""
+        return link_value
 
     def image_uri(self, idx, variety_idx):
         image_uri = ""
@@ -149,10 +157,18 @@ class EntityExtractionServiceResponse(BaseModel):
         return images_dict
 
     def category(self, idx, variety_idx):
-        return self.categories[0][idx][variety_idx]
+        try:
+            category_value = self.categories[0][idx][variety_idx]
+        except IndexError:
+            category_value = []
+        return category_value
 
     def first_paragraph(self, idx, variety_idx):
-        return self.first_paragraphs[0][idx][variety_idx]
+        try:
+            paragraph_value = self.first_paragraphs[0][idx][variety_idx]
+        except IndexError:
+            paragraph_value = ""
+        return paragraph_value
 
 
 class EntityAnnotationImage(BaseModel):
