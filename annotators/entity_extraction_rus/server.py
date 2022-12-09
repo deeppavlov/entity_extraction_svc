@@ -33,17 +33,10 @@ app.add_middleware(
 
 ner_config_name = os.getenv("NER_CONFIG")
 el_config_name = os.getenv("EL_CONFIG")
-include_misc = bool(int(os.getenv("INCLUDE_MISC", "0")))
-test_mode = int(os.getenv("TEST_MODE", "0"))
+port = os.getenv("PORT")
 
 ner_config = parse_config(ner_config_name)
 el_config = parse_config(el_config_name)
-
-if test_mode:
-    ner_config["chainer"]["pipe"][1]["thres_proba"] = 0.99
-    ner_config["chainer"]["pipe"][1]["test_mode"] = True
-    el_config["chainer"]["pipe"][0]["test_mode"] = True
-    el_config["chainer"]["pipe"][0]["num_entities_for_conn_ranking"] = 50
 
 try:
     ner = build_model(ner_config, download=True)
@@ -73,10 +66,6 @@ def punct_restore_process(tokens_batch, tags_batch):
     return proc_texts
 
 
-if test_mode:
-    punct_restore_model = build_model("src/punct_restore_eng.json")
-
-
 def add_stop_signs(texts):
     new_texts = []
     for text in texts:
@@ -102,11 +91,6 @@ class TripletsList(BaseModel):
 async def entity_extraction(payload: Payload):
     st_time = time.time()
     texts = payload.texts
-    if test_mode:
-        tokens, tags = punct_restore_model(texts)
-        if tags and isinstance(tags[0], str):
-            tags = [tags]
-        texts = punct_restore_process(tokens, tags)
     texts = add_stop_signs(texts)
     entity_info = {}
     entity_substr, init_entity_offsets, entity_offsets, entity_tags_with_probas, entity_positions, \
@@ -131,8 +115,7 @@ async def entity_extraction(payload: Payload):
     for batch_idx, raw_batch in enumerate(raw_entity_substr):
         for entity_idx, entity in enumerate(raw_batch):
             stripped_substr = raw_entity_substr[batch_idx][entity_idx].strip()
-            if all(char in string.printable for char in stripped_substr) \
-                    and any(char.isalnum() for char in stripped_substr):
+            if any(char.isalnum() for char in stripped_substr):
                 entity_substr[batch_idx].append(raw_entity_substr[batch_idx][entity_idx])
                 init_entity_offsets[batch_idx].append(raw_init_entity_offsets[batch_idx][entity_idx])
                 entity_offsets[batch_idx].append(raw_entity_offsets[batch_idx][entity_idx])
@@ -142,35 +125,29 @@ async def entity_extraction(payload: Payload):
     entity_ids, entity_tags, entity_conf, entity_pages, image_links, categories, first_pars, dbpedia_types = \
         [[[] for _ in texts] for _ in range(8)]
 
-    if el_config_name == "entity_linking_en.json":
-        entity_ids, entity_tags, entity_conf, entity_pages = \
-            el(entity_substr, sentences, entity_offsets, sentences_offsets)
-        entity_info = {"entity_substr": entity_substr, "entity_offsets": entity_offsets, "entity_ids": entity_ids,
-                       "entity_tags": entity_tags, "entity_conf": entity_conf, "entity_pages": entity_pages}
-    elif el_config_name == "entity_linking_en_full.json":
-        try:
-            entity_ids, entity_tags, entity_conf, entity_pages, image_links, categories, first_pars, dbpedia_types = \
-                el(entity_substr, sentences, entity_offsets, entity_tags_with_probas, sentences_offsets)
-            for i in range(len(entity_substr)):
-                for j in range(len(entity_substr[i])):
-                    if entity_tags[i][j] == []:
-                        entity_tags[i][j] = [""]
-                    if entity_ids[i][j] == []:
-                        entity_ids[i][j] = [""]
-                        entity_tags[i][j] = []
-                        entity_conf[i][j] = [0.0]
-                        entity_pages[i][j] = [""]
-                        image_links[i][j] = [""]
-                        first_pars[i][j] = [""]
-                        categories[i][j] = [[]]
-                        dbpedia_types[i][j] = [[]]
-        except Exception as e:
-            logger.error(f"{type(e)} error in entity linking: {e}")
+    try:
+        entity_ids, entity_tags, entity_conf, entity_pages, image_links, categories, first_pars, dbpedia_types = \
+            el(entity_substr, sentences, entity_offsets, entity_tags_with_probas, sentences_offsets)
+        for i in range(len(entity_substr)):
+            for j in range(len(entity_substr[i])):
+                if entity_tags[i][j] == []:
+                    entity_tags[i][j] = [""]
+                if entity_ids[i][j] == []:
+                    entity_ids[i][j] = [""]
+                    entity_tags[i][j] = []
+                    entity_conf[i][j] = [0.0]
+                    entity_pages[i][j] = [""]
+                image_links[i][j] = [""]
+                first_pars[i][j] = [""]
+                categories[i][j] = [[]]
+                dbpedia_types[i][j] = [[]]
+    except Exception as e:
+        logger.error(f"{type(e)} error in entity linking: {e}")
 
-        entity_info = {"entity_substr": entity_substr, "entity_offsets": entity_offsets, "entity_ids": entity_ids,
-                       "entity_tags": entity_tags, "entity_conf": entity_conf, "entity_pages": entity_pages,
-                       "image_links": image_links, "categories": categories, "first_paragraphs": first_pars,
-                       "dbpedia_types": dbpedia_types}
+    entity_info = {"entity_substr": entity_substr, "entity_offsets": entity_offsets, "entity_ids": entity_ids,
+                    "entity_tags": entity_tags, "entity_conf": entity_conf, "entity_pages": entity_pages,
+                    "image_links": image_links, "categories": categories, "first_paragraphs": first_pars,
+                    "dbpedia_types": dbpedia_types}
     total_time = time.time() - st_time
     logger.info(f"entity linking exec time = {total_time:.3f}s")
     return entity_info
@@ -262,4 +239,4 @@ async def model_training(fl: Optional[UploadFile] = File(None)):
     return {"success": True, "message": "Training started"}
 
 
-uvicorn.run(app, host='0.0.0.0', port=9103)
+uvicorn.run(app, host='0.0.0.0', port=int(port))
