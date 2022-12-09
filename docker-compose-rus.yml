@@ -1,5 +1,5 @@
 services:
-  agent:
+  agent-rus:
     env_file: [.env]
     environment:
       WAIT_HOSTS: "entity-extraction:9102, wiki-parser:9076"
@@ -21,7 +21,7 @@ services:
         reservations:
           memory: 64M
 
-  entity-extraction:
+  entity-extraction-rus:
     build:
       args:
         NER_CONFIG: entity_detection_rus.json
@@ -47,7 +47,7 @@ services:
         reservations:
           memory: 6G
 
-  wiki-parser:
+  wiki-parser-rus:
     env_file: [.env]
     build:
       args:
