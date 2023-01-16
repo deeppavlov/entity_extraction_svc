@@ -525,9 +525,9 @@ class TorchTransformersElTagPostprocessor(Component):
     
     def __call__(self, probas_batch, entity_substr_batch):
         ent_tag_proba_batch = []
-        for probas_list in probas_batch:
+        for entity_substr_list, probas_list in zip(entity_substr_batch, probas_batch):
             ent_tag_proba_list = []
-            for probas in probas_list:
+            for probas in probas_list[:len(entity_substr_list)]:
                 tags_with_probas = [(float(proba), self.tags_list[n]) for n, proba in enumerate(probas)]
                 tags_with_probas = sorted(tags_with_probas, key=lambda x: x[0], reverse=True)
                 ent_tag_proba_list.append(tags_with_probas[:3])

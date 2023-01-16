@@ -444,6 +444,7 @@ class EntityLinker(Component, Serializable):
             for n, (entity_substr, entity_substr_split, entity_sent, tags_with_probas) in \
                     enumerate(zip(entity_substr_list, entity_substr_split_list, entity_sent_list,
                                   tags_with_probas_list)):
+
                 tags_for_search = self.process_tags_for_search(entity_substr_list, tags_with_probas)
                 log.info(f"{entity_substr} --- tags: {tags_for_search}")
                 if tags_for_search:
@@ -956,7 +957,7 @@ class EntityLinker(Component, Serializable):
         if isinstance(entity_substr, str):
             entity_substr = entity_substr.replace('.', '').replace(',', '')
             if self.delete_hyphens:
-                for old_symb, new_symb in [("-", " "), ("'", " "), ("&", ""), ("/", " ")]:
+                for old_symb, new_symb in [("-", " "), ("'", " "), ("&", ""), ("/", " "), (":", " "), ("  ", " ")]:
                     entity_substr = entity_substr.replace(old_symb, new_symb)
             if len(entity_substr) > 1:
                 make_query_flag = True
