@@ -246,7 +246,7 @@ class NerChunkModel(Component):
                 ner_tokens_batch, ner_tokens_offsets_batch, ner_probas_batch, probas_batch = self.ner(text_batch)
                 entity_substr_batch, entity_positions_batch, entity_probas_batch = \
                     self.ner_parser(ner_tokens_batch, ner_probas_batch, probas_batch)
-                
+
                 entity_pos_tags_probas_batch = [[(entity_substr.lower(), entity_substr_positions, tag, entity_proba)
                                                  for tag, entity_substr_list in entity_substr_dict.items()
                                                  for entity_substr, entity_substr_positions, entity_proba in
@@ -379,32 +379,50 @@ class NerChunkModel(Component):
             if len(text_clean) != len(text_raw):
                 corr_substr_list, corr_offsets_list, init_offsets_list, corr_tags_list, corr_tags_with_probas_list, \
                     corr_probas_list, corr_pos_list = [], [], [], [], [], [], []
-                new_text = text_raw.lower()
+                new_text = text_raw.lower()  
                 pos_sum = 0
                 for entity_substr, entity_offsets, entity_tag, entity_tag_with_proba, entity_proba, entity_pos in \
                         zip(entity_substr_list, entity_offsets_list, entity_tags_list, entity_tags_with_probas_list,
                             entity_probas_list, entity_pos_list):
                     found = False
                     fnd = 0
-                    for symb, replace_list in [["", []], ["-", [("-", " - "), ("  ", " ")]], [". ", [(". ", ".")]],
-                                               ["/", [(" / ", "/")]], [" ", [(" (", "(")]], [" ’", [(" ’", "’")]]]:
-                        if symb in entity_substr:
-                            for old_symb, new_symb in replace_list:
-                                entity_substr = entity_substr.replace(old_symb, new_symb)
-                            fnd = new_text.find(entity_substr.lower())
-                            if fnd != -1:
-                                found = True
-                                break
+                    words = entity_substr.split()
+                    word_offsets = []
+                    for word in words:
+                        fnd = new_text.find(word.lower())
+                        if fnd != -1:
+                            word_offsets.append([fnd, fnd + len(word)])
+                    if len(word_offsets) == len(words) and len(word_offsets) > 1:
+                        spaces = []
+                        for j in range(1, len(word_offsets)):
+                            spaces.append(new_text[word_offsets[j - 1][1]:word_offsets[j][0]])
+                        if all([all([symb == " " for symb in space]) for space in spaces]):
+                            found = True
+                            start_offset = word_offsets[0][0]
+                            end_offset = word_offsets[-1][1]
+
+                    if not found:
+                        for symb, replace_list in [["", []], ["-", [("-", " - "), ("  ", " ")]], [". ", [(". ", ".")]],
+                                                   ["/", [(" / ", "/")]], [" ", [(" (", "(")]], [" ’", [(" ’", "’")]]]:
+                            if symb in entity_substr:
+                                for old_symb, new_symb in replace_list:
+                                    entity_substr = entity_substr.replace(old_symb, new_symb)
+                                fnd = new_text.find(entity_substr.lower())
+                                if fnd != -1:
+                                    found = True
+                                    start_offset = fnd
+                                    end_offset = fnd + len(entity_substr)
+                                    break
                     if found:
-                        corr_offsets_list.append([pos_sum + fnd, pos_sum + fnd + len(entity_substr)])
+                        corr_offsets_list.append([pos_sum + start_offset, pos_sum + end_offset])
                         init_offsets_list.append(entity_offsets)
                         corr_substr_list.append(entity_substr)
                         corr_tags_list.append(entity_tag)
                         corr_tags_with_probas_list.append(entity_tag_with_proba)
                         corr_probas_list.append(entity_proba)
                         corr_pos_list.append(entity_pos)
-                        new_text = new_text[fnd + len(entity_substr):]
-                        pos_sum = pos_sum + fnd + len(entity_substr)
+                        new_text = new_text[end_offset:]
+                        pos_sum = pos_sum + end_offset
                 
                 corr_offsets_batch.append(corr_offsets_list)
                 init_offsets_batch.append(init_offsets_list)

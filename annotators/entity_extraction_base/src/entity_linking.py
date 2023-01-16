@@ -271,6 +271,7 @@ class EntityLinker(Component, Serializable):
                        entity_offsets_batch: List[List[List[int]]] = None,
                        tags_with_probas_batch: List[List[Tuple[str, int]]] = None,
                        sentences_offsets_batch: List[List[Tuple[int, int]]] = None):
+
         entity_substr_batch = [[entity_substr.lower() for entity_substr in entity_substr_list]
                                for entity_substr_list in entity_substr_batch]
         if sentences_offsets_batch is None and sentences_batch is not None:
@@ -458,7 +459,8 @@ class EntityLinker(Component, Serializable):
                               and len(entity_substr.split()) == 1) or
                              (num_iter == 2 and tags_for_search[0] in tags_by_iter[2]
                               and len(entity_substr.split()) > 3) or
-                             num_iter == 3):
+                             num_iter > 2):
+
                         is_already_found = False
                         if "PER" in tags_for_search:
                             for already_found_substr in already_found:
@@ -466,6 +468,11 @@ class EntityLinker(Component, Serializable):
                                         in already_found_substr.split()]).intersection(set([word.lower() for word
                                                                                             in entity_substr.split()])):
                                     is_already_found = True
+                                    for k in range(len(entity_substr_list)):
+                                        if entity_substr_list[k].lower() == already_found_substr.lower() \
+                                                and init_cand_ent_scores_dict[k]:
+                                            init_cand_ent_scores_dict[n] = copy.deepcopy(init_cand_ent_scores_dict[k])
+                                            break
                                     break
                         cand_ent_scores = []
                         if not is_already_found:
@@ -490,7 +497,8 @@ class EntityLinker(Component, Serializable):
                             tm_sqlite_end = time.time()
                             if "PER" in tags_for_search:
                                 already_found.add(entity_substr)
-                        init_cand_ent_scores_dict[n] = cand_ent_scores
+                        if cand_ent_scores:
+                            init_cand_ent_scores_dict[n] = cand_ent_scores
                 entity_tags_dict[n] = tags_with_probas[0][1]
         return entity_tags_dict, init_cand_ent_scores_dict
     
@@ -826,6 +834,10 @@ class EntityLinker(Component, Serializable):
             for new_tag in {"POLITICIAN", "ACTOR", "WRITER", "MUSICIAN", "ATHLETE", "PAINTER", "ENTREPRENEUR"}:
                 if new_tag not in tags_for_search:
                     tags_for_search.append(new_tag)
+
+        if tags_with_probas[1][1] in {"POLITICIAN", "ACTOR", "WRITER", "MUSICIAN", "ATHLETE", "PAINTER", "ENTREPRENEUR"} \
+                and tags_with_probas[1][0] > 0.15 and "PER" not in tags_for_search:
+            tags_for_search.append("PER")
         if tags_with_probas[0][1] == "COUNTRY" and (tags_with_probas[1][1] == "SPORTS_EVENT" or
                 tags_with_probas[2][1] == "SPORTS_EVENT") and "SPORTS_EVENT" not in tags_for_search:
             tags_for_search.append("SPORTS_EVENT")
